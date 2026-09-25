@@ -3,8 +3,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="$(cat "$ROOT/govkit/VERSION")"
-MAJOR="${VERSION%%.*}"
-OUT="$ROOT/dist/govkit-v${MAJOR}.tar.gz"
+SHORT="$(echo "$VERSION" | cut -d. -f1-2)"
+OUT="$ROOT/dist/govkit-v${SHORT}.tar.gz"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
@@ -19,8 +19,10 @@ chmod +x "$STAGE/govkit/install.sh" "$STAGE/govkit/uninstall.sh" "$STAGE/govkit/
 "$STAGE/govkit/bin/govkit" kb validate >/dev/null
 "$STAGE/govkit/bin/govkit" lint "$STAGE/govkit/examples/sales-transactions-anl-dp-cl" --format json -o /dev/null
 find "$STAGE/govkit" \( -name __pycache__ -o -name .python \) -prune -exec rm -rf {} +
+(cd "$STAGE/govkit" && { echo MANIFEST; find . -type f ! -name MANIFEST | sed 's|^\./||'; } | LC_ALL=C sort > MANIFEST)
 
 mkdir -p "$ROOT/dist"
+rm -f "$ROOT"/dist/govkit-v*.tar.gz
 tar --owner=0 --group=0 --numeric-owner -C "$STAGE" -czf "$OUT" govkit 2>/dev/null || tar -C "$STAGE" -czf "$OUT" govkit
 echo "✔ $OUT ($(du -h "$OUT" | cut -f1)) · govkit $VERSION"
 echo "  Instalar: cd ~/Downloads && tar xzf $(basename "$OUT") && cd govkit && ./install.sh && source ~/.zshrc"

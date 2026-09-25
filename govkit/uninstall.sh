@@ -16,6 +16,10 @@ for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
   fi
 done
 
+if command -v claude >/dev/null 2>&1 && claude mcp remove govkit -s user >/dev/null 2>&1; then
+  echo "✔ Servidor MCP 'govkit' eliminado de Claude Code"
+fi
+
 if [ "$YES" -eq 0 ]; then
   printf "¿Eliminar %s? [s/N] " "$HOME_DIR"
   read -r ans

@@ -15,7 +15,7 @@ on:
       ruleset:
         description: "Versión del kit (tag del release del repo de arquitectura)"
         type: string
-        default: "v1"
+        default: "v1.1"
       fail_on:
         type: string
         default: "BLOCKER"
@@ -46,9 +46,11 @@ jobs:
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with: {sarif_file: govkit.sarif, category: govkit}
-      - name: Reporte JSON (artefacto para catálogo/scoring)
+      - name: Reportes JSON (catálogo/scoring) y HTML (evidencia para revisores)
         if: always()
-        run: "$RUNNER_TEMP/govkit/bin/govkit lint . --format json -o govkit-report.json || true"
+        run: |
+          "$RUNNER_TEMP/govkit/bin/govkit" lint . --format json -o govkit-report.json || true
+          "$RUNNER_TEMP/govkit/bin/govkit" lint . --format html -o govkit-report.html || true
       - uses: actions/upload-artifact@v4
         if: always()
-        with: {name: govkit-report, path: govkit-report.json}
+        with: {name: govkit-report, path: "govkit-report.json\ngovkit-report.html"}

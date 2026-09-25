@@ -29,10 +29,12 @@ def _engine(args, packs, stage=None):
 
 
 def _emit(res, args, packs):
-    from govkit.report import console, jsonr, markdown, sarif
+    from govkit.report import console, html, jsonr, markdown, sarif
 
     fmt = args.format
-    if fmt == "json":
+    if fmt == "html":
+        text = html.build(res, packs=packs, with_scoring="dp" in packs)
+    elif fmt == "json":
         text = json.dumps(jsonr.build(res, packs=packs, profile=getattr(args, "profile", None)), ensure_ascii=False, indent=2)
     elif fmt == "sarif":
         text = json.dumps(sarif.build(res), ensure_ascii=False, indent=2)
@@ -95,6 +97,53 @@ def cmd_score(args):
     print(f"\nGlobal: {sc['global']} → {sc['classification']}")
     print("Dimensiones: " + " · ".join(f"{k}: {v}" for k, v in sc["dimensions"].items()))
     print("⛔ = pilar limitado por un BLOCKER abierto (08 §24). " + sc["note"])
+    return 0
+
+
+def cmd_fix(args):
+    from govkit import fixer
+
+    engine = _engine(args, ["dp"])
+    before = engine.run()
+    actions = fixer.plan(before, placeholders=not args.no_placeholders)
+    if args.apply:
+        fixer.apply(before.ctx, actions)
+        after = _engine(args, ["dp"]).run()
+    if args.format == "json":
+        out = {"mode": "apply" if args.apply else "plan", "target": before.ctx.repo_name,
+               "actions": [a.to_dict() for a in actions], "before": before.counts()}
+        if args.apply:
+            out["after"] = after.counts()
+            out["verdict_after"] = after.verdict
+        print(json.dumps(out, ensure_ascii=False, indent=2, default=str))
+        return 0
+    icon = {"mkdir": "📁", "template": "📄", "set": "✎ ", "placeholder": "➕", "bump": "⬆ ", "manual": "✋"}
+    state = {"planned": "", "applied": " ✔", "failed": " ✘", "manual": ""}
+    auto = [a for a in actions if a.kind in fixer.AUTO_KINDS]
+    manual = [a for a in actions if a.kind == "manual"]
+    print(f"govkit fix · {before.ctx.repo_name} · {'APLICAR' if args.apply else 'SIMULACIÓN (usa --apply para escribir)'}\n")
+    if auto:
+        print(f"Automáticas ({len(auto)}):")
+        for a in auto:
+            print(f"  {icon[a.kind]} {a.file}: {a.detail}{state[a.status]}"
+                  + (f"  ({a.reason})" if a.reason else "") + f"   [{', '.join(a.rules)}]")
+    if manual and (args.verbose or not auto):
+        print(f"\nRequieren decisión humana ({len(manual)}):")
+        for a in manual:
+            print(f"  {icon['manual']} {a.file}{' · ' + a.key if a.key else ''}: {a.detail}   [{', '.join(a.rules)}]")
+    elif manual:
+        print(f"\n{len(manual)} hallazgo(s) con remediación manual (ver con -v).")
+    if not actions:
+        print("Sin remediaciones automáticas pendientes.")
+    if args.apply:
+        b, a_ = before.counts(), after.counts()
+        print("\nAntes → después: " + " · ".join(f"{k} {b[k]}→{a_[k]}" for k in ("BLOCKER", "HIGH", "MEDIUM", "LOW"))
+              + f" · veredicto {before.verdict}→{after.verdict}")
+        failed = [a for a in actions if a.status == "failed"]
+        if failed:
+            print(f"⚠️  {len(failed)} acción(es) no aplicadas de forma segura: revisar a mano.")
+    elif auto:
+        print("\nLas marcas <COMPLETAR> dejan el esqueleto explícito; el hallazgo sigue abierto hasta completarlo.")
     return 0
 
 
@@ -247,6 +296,21 @@ def cmd_baseline(args):
     return 0
 
 
+def cmd_mcp(args):
+    if args.print_config:
+        from govkit.paths import KIT_HOME
+
+        exe = str(KIT_HOME / "bin" / "govkit")
+        print("# Claude Code (todas tus sesiones):\n"
+              f"claude mcp add --scope user govkit -- {exe} mcp\n\n"
+              "# Otros clientes MCP (Cursor, Claude Desktop, etc.) — bloque mcpServers:\n"
+              + json.dumps({"mcpServers": {"govkit": {"command": exe, "args": ["mcp"]}}}, indent=2))
+        return 0
+    from govkit.mcpserver import serve
+
+    return serve()
+
+
 def cmd_selftest(args):
     import unittest
 
@@ -260,7 +324,7 @@ def cmd_selftest(args):
 def _common_lint(p, with_path=True):
     if with_path:
         p.add_argument("path", nargs="?", default=".", help="raíz del repositorio (default: .)")
-    p.add_argument("--format", choices=["console", "json", "sarif", "md"], default="console")
+    p.add_argument("--format", choices=["console", "json", "sarif", "md", "html"], default="console")
     p.add_argument("--output", "-o", help="escribir el reporte en archivo")
     p.add_argument("--stage", help="forzar estado del ciclo de vida (p.ej. listo_para_produccion)")
     p.add_argument("--base", help="ref git base para checks de diff (breaking changes, transiciones, commits)")
@@ -302,6 +366,16 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--format", choices=["table", "json"], default="table")
     p.add_argument("--stage")
     p.set_defaults(fn=cmd_score)
+
+    p = sub.add_parser("fix", help="auto-remediación segura (simulación por defecto; --apply para escribir)")
+    p.add_argument("path", nargs="?", default=".")
+    p.add_argument("--apply", action="store_true", help="escribir los cambios (sin esto solo muestra el plan)")
+    p.add_argument("--stage", help="planificar contra un estado destino (p.ej. listo_para_produccion)")
+    p.add_argument("--rules", help="limitar a reglas (glob, coma)")
+    p.add_argument("--no-placeholders", action="store_true", help="no insertar claves ausentes como <COMPLETAR>")
+    p.add_argument("--format", choices=["console", "json"], default="console")
+    p.add_argument("--verbose", "-v", action="store_true", help="listar también las remediaciones manuales")
+    p.set_defaults(fn=cmd_fix)
 
     p = sub.add_parser("rules", help="listar el catálogo de reglas")
     p.add_argument("--format", choices=["table", "json", "md"], default="table")
@@ -370,6 +444,10 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--output", "-o", default=".govkit-baseline.json")
     p.add_argument("--stage")
     p.set_defaults(fn=cmd_baseline, format="json")
+
+    p = sub.add_parser("mcp", help="servidor MCP (stdio) para agentes: Claude Code, Cursor, Claude Desktop")
+    p.add_argument("--print-config", action="store_true", help="mostrar cómo registrarlo en los clientes")
+    p.set_defaults(fn=cmd_mcp)
 
     p = sub.add_parser("selftest", help="ejecutar la suite de pruebas del kit")
     p.add_argument("--verbose", "-v", action="store_true")

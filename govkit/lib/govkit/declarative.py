@@ -172,6 +172,19 @@ def run_exists(ctx: RepoContext, chk: Dict[str, Any]) -> Iterable[Finding]:
                           fix={"type": "create", "path": anys[0].replace("**/", "").replace("*", "<nombre>")})
 
 
+def _set_fix(path: str, spec: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Pista de remediación para `govkit fix`: ruta, valores permitidos y forma esperada del valor."""
+    spec = spec or {}
+    fix: Dict[str, Any] = {"type": "set", "path": path}
+    if "enum" in spec:
+        fix["allowed"] = spec["enum"]
+    if spec.get("type") == "list" or "min_items" in spec:
+        fix["shape"] = "list"
+    elif spec.get("type") == "map":
+        fix["shape"] = "map"
+    return fix
+
+
 def run_field(ctx: RepoContext, chk: Dict[str, Any]) -> Iterable[Finding]:
     docs = ctx.artifact(chk["target"])
     if chk.get("fields"):  # aserciones distintas por ruta: {ruta: aserción}
@@ -187,12 +200,9 @@ def run_field(ctx: RepoContext, chk: Dict[str, Any]) -> Iterable[Finding]:
                 found, value = res if isinstance(res, tuple) else (True, res)
                 err = check_value(value, found, spec or {}, ctx)
                 if err:
-                    fix = {"type": "set", "path": concrete}
-                    if "enum" in (spec or {}):
-                        fix["allowed"] = spec["enum"]
                     yield Finding(f"`{concrete}`: {err}", _loc(doc, concrete),
                                   evidence={"key": concrete, "actual": None if not found else _as_str(value)[:120]},
-                                  fix=fix)
+                                  fix=_set_fix(concrete, spec))
 
 
 def run_each(ctx: RepoContext, chk: Dict[str, Any]) -> Iterable[Finding]:
@@ -212,8 +222,7 @@ def run_each(ctx: RepoContext, chk: Dict[str, Any]) -> Iterable[Finding]:
                 err = check_value(v2, f2, spec or {}, ctx)
                 if err:
                     yield Finding(f"{chk.get('noun', 'elemento')} '{label}' → `{key}`: {err}", _loc(doc, ipath),
-                                  evidence={"key": ipath, "item": str(label)},
-                                  fix={"type": "set", "path": ipath, **({"allowed": spec["enum"]} if spec and "enum" in spec else {})})
+                                  evidence={"key": ipath, "item": str(label)}, fix=_set_fix(ipath, spec))
 
 
 def run_count(ctx: RepoContext, chk: Dict[str, Any]) -> Iterable[Finding]:

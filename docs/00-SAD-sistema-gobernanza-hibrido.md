@@ -1,6 +1,6 @@
 # Sistema de Gobernanza Híbrido de Datos — Documento de Arquitectura de Solución (SAD)
 
-Versión: 1.0
+Versión: 1.1 (govkit 1.1.0: integración MCP, auto-remediación y reporte HTML)
 Estado: Propuesta para revisión del Equipo de Arquitectura de Datos Regional
 Fecha: 2026-09-25
 Alcance: Corporativo (aplicable a todos los repositorios de Data Products y al repositorio `access-analyzer`)
@@ -22,7 +22,7 @@ Este documento propone convertirla en un **Sistema de Gobernanza Híbrido** con 
 > Solo la superficie que requiere interpretación llega a un LLM local, con un contexto mínimo y verificable (consultivo).
 > Lo organizacional queda como checklist humano explícito.
 
-Resultados medidos sobre la implementación de referencia (`govkit` v1.0.0):
+Resultados medidos sobre la implementación de referencia (`govkit` v1.1.0):
 
 | Indicador | Valor |
 |---|---|
@@ -34,7 +34,9 @@ Resultados medidos sobre la implementación de referencia (`govkit` v1.0.0):
 | Tamaño total de la KB | ≈16,4k tokens (media 746 por mini-contexto; máx. 948) |
 | Contexto típico enviado al LLM por revisión | mediana ≈5,7k tokens con presupuesto 6k (≈3–6k), cabe en un 7B con `num_ctx=8192` |
 | Latencia del motor determinista (repo de referencia, 73 archivos) | ≈0,5 s |
-| Pruebas automatizadas del kit | 52 (Python 3.9 → 3.13) |
+| Superficies de integración | CLI · pre-commit · CI (SARIF / JSON / HTML) · **MCP para agentes de código** (10 herramientas) |
+| Auto-remediación segura (`govkit fix`) | carpetas, plantillas, valores deterministas, semver, esqueleto `<COMPLETAR>` · ≈1 s |
+| Pruebas automatizadas del kit | 66 (Python 3.9 → 3.13) |
 
 El corpus documental completo (~19 páginas más lineamientos; del orden de decenas de miles de tokens, estimado) no cabe
 en la ventana útil de un modelo local 7B–14B y, aun si cupiera, diluiría la atención del modelo. La modularización
@@ -575,6 +577,49 @@ Desarrollador          pre-commit              PR (CI)                        Re
      │                                                     periódico: govkit portfolio (cross-repo)
 ```
 
+### 6.1 Integración con agentes de código (MCP) — ADR-007
+
+El mismo sistema se expone a agentes (Claude Code, Cursor, Claude Desktop) como servidor **MCP stdio** sin dependencias.
+La frontera de confianza es idéntica a la de CLI/CI: el agente consume la verdad determinista y redacta el juicio
+semántico, pero **no verifica**: sus hallazgos pasan por el mismo verificador que la salida de Ollama.
+
+```
+ Agente (Claude Code) ── JSON-RPC stdio ──►  govkit mcp
+   │                                          ├─ VERDAD      lint · gate · score · explain_rule · search_rules
+   │  corrige código / completa ficha ◄───────┤              (motor determinista: mismos hallazgos que el PR)
+   │                                          ├─ ACCIÓN      fix (plan → apply, verificado) · init_data_product
+   │  pide contexto normativo ────────────────┤─ CONTEXTO    kb_context · semantic_review_plan (enrutador KB)
+   │  redacta hallazgos semánticos ──────────►└─ VERIFICADOR verify_semantic_findings
+   │                                                 esquema · cita visible en el paquete · grounding · tope severidad
+   └─ reporta al humano SOLO lo verificado (consultivo) · recursos: govkit://kb/KB_nn · matriz · SAD
+```
+
+| Herramienta | Capa | Qué devuelve |
+|---|---|---|
+| `lint` / `gate` / `score` | Verdad | veredicto, hallazgos compactos (`archivo:línea`, `json_path`, autofix) + ficha de cada regla una vez |
+| `fix` | Acción | plan o cambios aplicados con delta de severidades |
+| `explain_rule` / `search_rules` | Verdad | trazabilidad documento § cita, reglas KB asociadas / búsqueda BM25 en el catálogo |
+| `kb_context` | Contexto | paquete mínimo de mini-contextos por tarea, archivos, reglas o consulta (≈3,9k tokens) |
+| `semantic_review_plan` | Contexto | superficie semántica; por artefacto: brief de revisión + esquema de salida (≈6,5k tokens) |
+| `verify_semantic_findings` | Verificador | hallazgos conservados + estadísticas de descarte (citas inválidas, sin grounding) |
+
+Prompts del servidor: `revision_gobernanza`, `nuevo_data_product`, `consulta_framework`. El instalador registra el
+servidor en Claude Code (`claude mcp add -s user govkit -- govkit mcp`) si el CLI `claude` está presente.
+
+### 6.2 Auto-remediación determinista (`govkit fix`) — ADR-007
+
+| Acción | Origen (`fix` del hallazgo) | Garantía |
+|---|---|---|
+| `mkdir` | carpeta estándar ausente (GOV-STR-001/002) | crea + `.gitkeep` solo si queda vacía |
+| `template` | archivo estándar ausente con plantilla corporativa (README, CODEOWNERS, CHANGELOG, workflows, runbook, ficha, contrato…) | variables derivadas de la ficha o del nombre estándar del repo; nunca sobrescribe |
+| `set` | valor determinista conocido (estado lifecycle, `RoleName`, clasificación PII) | edición verificada |
+| `bump` | breaking change sin MAJOR / cambio de schema sin versión | semver calculado desde la versión actual |
+| `placeholder` | clave obligatoria **ausente** | inserta `<COMPLETAR>` (o `[<COMPLETAR: a \| b>]` si hay catálogo/lista): el hallazgo sigue abierto |
+| `manual` | valor humano inválido, renombres, movimientos | se reporta; nunca se automatiza |
+
+Edición de YAML **conservando comentarios** (inserción por posición de nodos, no re-serialización) y verificación
+post-edición: re-parseo, clave presente con el valor esperado y ninguna clave previa perdida; si falla, se revierte.
+
 ---
 
 ## 7. Especificación de interfaces
@@ -583,7 +628,9 @@ Desarrollador          pre-commit              PR (CI)                        Re
 
 | Comando | Propósito | Salida |
 |---|---|---|
-| `govkit lint [path] [--base REF] [--stage S] [--profile P] [--format console\|json\|sarif\|md]` | Motor determinista | reporte + exit code |
+| `govkit lint [path] [--base REF] [--stage S] [--profile P] [--format console\|json\|sarif\|md\|html]` | Motor determinista | reporte + exit code |
+| `govkit fix [path] [--apply] [--stage S] [--no-placeholders]` | Auto-remediación segura (simulación por defecto) | plan / cambios + delta |
+| `govkit mcp [--print-config]` | Servidor MCP stdio para agentes (Claude Code, Cursor, Claude Desktop) | JSON-RPC |
 | `govkit gate [path] --to <estado>` | Pre-flight de promoción con severidades del estado destino | APROBADO / BLOQUEADO |
 | `govkit score [path]` | Pre-score por pilar (19) evaluado contra `productivo` | tabla / JSON |
 | `govkit init --domain --subdomain --type --country [--owner]` | Repo estándar (estructura, ficha, contratos, IAM data+infra, CI) | repo listo para `lint` |
@@ -604,8 +651,8 @@ Desarrollador          pre-commit              PR (CI)                        Re
 ### 7.3 Integración CI
 
 `govkit/templates/github/govkit-governance.yml`: reusable workflow para `base-workflows` (descarga el kit por versión,
-ejecuta `lint --base`, sube SARIF a Code Scanning y publica el resumen). `pre-commit-config.yaml` para equipos que usan
-pre-commit.
+ejecuta `lint --base`, sube SARIF a Code Scanning, publica el resumen y adjunta los reportes JSON y HTML como artefacto).
+`pre-commit-config.yaml` para equipos que usan pre-commit.
 
 ---
 
@@ -628,9 +675,9 @@ pre-commit.
 | Ola | Alcance | Criterio de salida |
 |---|---|---|
 | 0 · Validación (2 semanas) | Revisión de este SAD, del catálogo y de los hallazgos documentales; decidir ADR-006 | Catálogo aprobado por Arquitectura + Gobierno |
-| 1 · Piloto (4 semanas) | 2–3 Data Products (Sales, Product, Customer) en CL; `lint` en PR en modo informativo; baseline | FP < 5%, lint < 5 s |
+| 1 · Piloto (4 semanas) | 2–3 Data Products (Sales, Product, Customer) en CL; `lint` en PR en modo informativo; baseline; `fix` para adopción brownfield | FP < 5%, lint < 5 s |
 | 2 · Enforcement (4 semanas) | `fail_on: BLOCKER` en PR; `gate` en promoción; pack `omd` en `access-analyzer` | 0 BLOCKER en productivos piloto |
-| 3 · Semántica (4 semanas) | `review` local con Qwen 7B/14B; medir tasa de hallazgos útiles y descarte | ≥ 60% hallazgos útiles según Arquitectura |
+| 3 · Semántica (4 semanas) | `review` local con Qwen 7B/14B y agentes vía MCP (mismo verificador); medir tasa de hallazgos útiles y descarte por redactor | ≥ 60% hallazgos útiles según Arquitectura |
 | 4 · Escala regional | Repos país, `portfolio` periódico, integración de reportes JSON a OpenMetadata/scoring | adopción ≥ 80% repos |
 
 ---
@@ -684,15 +731,16 @@ arquitectura/
 ├── docs/00-SAD-sistema-gobernanza-hibrido.md   ← este documento
 ├── docs/01-matriz-reglas.md                     ← generado: govkit rules --format md
 ├── docs/02-hallazgos-auditoria-documental.md
-├── docs/adr/ADR-001 … ADR-006
+├── docs/adr/ADR-001 … ADR-007
 └── govkit/
     ├── install.sh · uninstall.sh · bin/govkit · VERSION
     ├── rules/catalog.yaml · rules/registry/*.yaml
     ├── schemas/*.schema.json
     ├── kb/KB_00 … KB_21 · kb/_graph.yaml
-    ├── lib/govkit/ (engine, declarative, plugins/*, kb/*, llm/*, report/*, scoring, scaffold, cli)
+    ├── lib/govkit/ (engine, declarative, plugins/*, kb/*, llm/*, report/* [json, sarif, md, html], scoring, scaffold,
+    │                fixer [govkit fix], mcpserver [govkit mcp], cli)
     ├── templates/data-product/ · templates/github/
     ├── examples/sales-transactions-anl-dp-cl/   ← Data Product de referencia (PASS en gate)
-    ├── tests/ (52 pruebas + fixtures omd/docs/portfolio)
+    ├── tests/ (66 pruebas + fixtures omd/docs/portfolio)
     └── vendor/yaml (PyYAML puro, MIT)
 ```

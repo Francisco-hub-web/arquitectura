@@ -8,20 +8,21 @@ Data & AI Discipline Framework de Cencosud. Arquitectura: `docs/00-SAD-sistema-g
 | Carpeta | Qué es |
 |---|---|
 | `bin/govkit` | Lanzador (bash 3.2 compatible) |
-| `lib/govkit/` | Motor: `engine`, `declarative`, `plugins/*` (IAM, contratos, SQL/dbt, AST, seguridad, OMD…), `kb/*` (almacén, BM25, enrutador), `llm/*` (Ollama, revisor), `report/*` (JSON, SARIF, MD, consola), `scoring`, `scaffold`, `cli` |
+| `lib/govkit/` | Motor: `engine`, `declarative`, `plugins/*` (IAM, contratos, SQL/dbt, AST, seguridad, OMD…), `kb/*` (almacén, BM25, enrutador), `llm/*` (Ollama, revisor), `report/*` (JSON, SARIF, MD, HTML, consola), `fixer` (auto-remediación), `mcpserver` (MCP stdio), `scoring`, `scaffold`, `cli` |
 | `rules/catalog.yaml` | 259 reglas trazadas a documento + sección + cita |
 | `rules/registry/` | Dominios, tags, lifecycle, scoring, cuentas AWS/OMD, matriz de consumo, métricas corporativas, capacidades |
 | `schemas/` | Contratos JSON: ficha de Data Product, Data Contract, calidad, reporte, salida del LLM, front-matter KB, config |
 | `kb/` | 22 mini-contextos `KB_00 … KB_21` + `_graph.yaml` (dependencias, tareas, proyecciones) |
 | `templates/` | Esqueleto de repo de Data Product (`govkit init`) y workflow reusable de CI |
 | `examples/sales-transactions-anl-dp-cl/` | Data Product de referencia completo (PASS en gate a producción) |
-| `tests/` | 52 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado) |
+| `tests/` | 66 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado, fix, MCP, HTML) |
 | `vendor/yaml` | PyYAML 6.0.1 puro Python (MIT) para instalación sin pip |
 
 ## Comandos
 
 ```
-govkit lint [path] [--base REF] [--stage S] [--profile pre-commit|pr|gate|catalog|periodic] [--format console|json|sarif|md]
+govkit lint [path] [--base REF] [--stage S] [--profile pre-commit|pr|gate|catalog|periodic] [--format console|json|sarif|md|html]
+govkit fix [path] [--apply] [--stage S] [--no-placeholders] [-v]      govkit mcp [--print-config]
 govkit gate [path] --to <estado>            govkit score [path]            govkit baseline [path]
 govkit init --domain D --subdomain S --type anl|txd --country cl [--owner email]
 govkit rules [--format md|json] [--nature DH]   govkit explain GOV-XXX-NNN

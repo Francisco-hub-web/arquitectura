@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # =============================================================================================
 #  govkit — instalador (macOS / Linux · compatible con bash 3.2)
-#  Uso:  cd ~/Downloads && tar xzf govkit-v1.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+#  Uso:  cd ~/Downloads && tar xzf govkit-v1.1.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 #  Opciones:
 #    --pull-model        descarga el modelo local en Ollama (si Ollama está instalado)
 #    --model NOMBRE      modelo por defecto (default: qwen2.5:7b-instruct)
 #    --prefix RUTA       instalar en RUTA en vez de <lakehousev2>/governance/govkit
 #    --no-rc             no modificar ~/.zshrc
-#    --full-test         ejecutar la suite completa (≈20-30 s) además del smoke test
+#    --full-test         ejecutar la suite completa (≈30 s) además del smoke test
+#    --no-mcp            no registrar el servidor MCP en Claude Code (si está instalado)
 #  Variables: LAKEHOUSE_DIR=/ruta/a/lakehousev2  GOVKIT_PYTHON=/ruta/python3
 # =============================================================================================
 set -euo pipefail
@@ -18,6 +19,7 @@ MODEL="${GOVKIT_MODEL:-qwen2.5:7b-instruct}"
 PULL_MODEL=0
 NO_RC=0
 FULL_TEST=0
+NO_MCP=0
 PREFIX=""
 
 say()  { printf "\033[1;36m▸\033[0m %s\n" "$*"; }
@@ -32,7 +34,8 @@ while [ $# -gt 0 ]; do
     --prefix) PREFIX="${2:?--prefix requiere una ruta}"; shift ;;
     --no-rc) NO_RC=1 ;;
     --full-test) FULL_TEST=1 ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    --no-mcp) NO_MCP=1 ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) die "Opción desconocida: $1 (usar --help)" ;;
   esac
   shift
@@ -95,8 +98,13 @@ else
     say "Versión previa respaldada en $BAK"
     ls -1d "$TARGET".bak-* 2>/dev/null | sort -r | tail -n +4 | while read -r old; do rm -rf "$old"; done
   fi
-  mkdir -p "$(dirname "$TARGET")"
-  cp -R "$SRC" "$TARGET"
+  mkdir -p "$TARGET"
+  if [ -f "$SRC/MANIFEST" ]; then
+    # Copia exacta del manifiesto: restos de extracciones anteriores en ~/Downloads/govkit no se instalan
+    (cd "$SRC" && tar -cf - -T MANIFEST) | (cd "$TARGET" && tar -xf -)
+  else
+    cp -R "$SRC/." "$TARGET/"
+  fi
   find "$TARGET" \( -name __pycache__ -o -name .DS_Store \) -prune -exec rm -rf {} + 2>/dev/null || true
 fi
 printf "%s\n" "$PY" > "$TARGET/.python"
@@ -162,6 +170,18 @@ else
   warn "Ollama no detectado (opcional, solo para revisión semántica): brew install ollama && ollama pull $MODEL"
 fi
 
+# ---------------------------------------------------------------------------------- 7. Claude Code (MCP, opcional)
+if [ "$NO_MCP" -eq 0 ] && command -v claude >/dev/null 2>&1; then
+  claude mcp remove govkit -s user >/dev/null 2>&1 || true
+  if claude mcp add -s user govkit -- "$TARGET/bin/govkit" mcp >/dev/null 2>&1; then
+    ok "Claude Code: servidor MCP 'govkit' registrado (scope user) · verifica con /mcp dentro de claude"
+  else
+    warn "No se pudo registrar el MCP: claude mcp add -s user govkit -- $TARGET/bin/govkit mcp"
+  fi
+else
+  say "Agentes MCP (Cursor, Claude Desktop…): govkit mcp --print-config"
+fi
+
 if [ -d "$LH/.git" ]; then
   say "lakehousev2 es un repo git. Hook opcional de pre-commit: govkit hooks install \"$LH\""
 fi
@@ -174,6 +194,8 @@ $(printf "\033[1;32m")Listo.$(printf "\033[0m") Ejecuta:  source ~/.zshrc
   govkit lint $TARGET/examples/sales-transactions-anl-dp-cl
   govkit init --domain sales --subdomain transactions --type anl --country cl --owner tu.email@cencosud.com
   govkit gate --to listo_para_produccion              # dentro de un repo de Data Product
+  govkit fix                                          # plan de auto-remediación segura (--apply para escribir)
+  govkit lint --format html -o reporte.html           # reporte autocontenido para compartir
   govkit kb route --task promover_a_produccion        # qué conocimiento carga el LLM
   govkit ask "¿qué exige el gate a producción?" --no-llm
   open $TARGET/docs/00-SAD-sistema-gobernanza-hibrido.md
