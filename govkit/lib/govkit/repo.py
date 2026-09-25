@@ -189,7 +189,7 @@ class RepoContext:
     def repo_name(self) -> str:
         if self.config.get("repo_name"):
             return self.config["repo_name"]
-        url = self.git("config", "--get", "remote.origin.url")
+        url = self.git("config", "--get", "remote.origin.url") if self.is_repo_root else None
         if url:
             name = url.strip().rstrip("/").split("/")[-1]
             return name[:-4] if name.endswith(".git") else name
@@ -208,28 +208,57 @@ class RepoContext:
         return out.stdout if out.returncode == 0 else None
 
     @property
+    def git_prefix(self) -> Optional[str]:
+        """Ruta del repo evaluado relativa a la raíz git ('' si es la raíz; None si no hay git)."""
+        if "git_prefix" not in self.cache:
+            top = self.git("rev-parse", "--show-toplevel")
+            prefix = None
+            if top and top.strip():
+                try:
+                    prefix = self.root.relative_to(Path(top.strip()).resolve()).as_posix()
+                    prefix = "" if prefix == "." else prefix + "/"
+                except ValueError:
+                    prefix = None
+            self.cache["git_prefix"] = prefix
+        return self.cache["git_prefix"]
+
+    @property
     def is_git(self) -> bool:
-        return self.git("rev-parse", "--is-inside-work-tree") is not None
+        return self.git_prefix is not None
+
+    @property
+    def is_repo_root(self) -> bool:
+        """Rama, commits y remoto solo describen al Data Product si la ruta evaluada ES la raíz del repo git
+        (evita atribuir a un producto la rama de un monorepo o del repo contenedor)."""
+        return self.git_prefix == ""
 
     def changed_files(self) -> Optional[List[str]]:
         if not self.base_ref:
             return None
+        prefix = self.git_prefix
+        if prefix is None:
+            return []
         # commits del PR (merge-base…HEAD) ∪ cambios sin commitear ∪ archivos nuevos no rastreados
-        parts = [self.git("diff", "--name-only", f"{self.base_ref}...HEAD") or "",
-                 self.git("diff", "--name-only", "HEAD") or "",
-                 self.git("ls-files", "--others", "--exclude-standard") or ""]
+        parts = [self.git("diff", "--name-only", f"{self.base_ref}...HEAD", "--", ".") or "",
+                 self.git("diff", "--name-only", "HEAD", "--", ".") or "",
+                 self.git("ls-files", "--others", "--exclude-standard", "--full-name", ".") or ""]
         seen: List[str] = []
         for line in "\n".join(parts).splitlines():
-            if line.strip() and line.strip() not in seen:
-                seen.append(line.strip())
+            line = line.strip()
+            if line and line.startswith(prefix):
+                rel = line[len(prefix):]
+                if rel not in seen:
+                    seen.append(rel)
         return seen
 
     def base_text(self, rel: str) -> Optional[str]:
-        if not self.base_ref:
+        if not self.base_ref or self.git_prefix is None:
             return None
-        return self.git("show", f"{self.base_ref}:{rel}")
+        return self.git("show", f"{self.base_ref}:{self.git_prefix}{rel}")
 
     def current_branch(self) -> Optional[str]:
+        if not self.is_repo_root:
+            return None
         env = os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GOVKIT_BRANCH")
         if env:
             return env
@@ -237,7 +266,7 @@ class RepoContext:
         return out.strip() if out and out.strip() != "HEAD" else None
 
     def commit_messages(self) -> List[str]:
-        if not self.base_ref:
+        if not self.base_ref or not self.is_repo_root:
             return []
         out = self.git("log", "--format=%s", f"{self.base_ref}..HEAD")
         return [l for l in (out or "").splitlines() if l.strip()]

@@ -34,7 +34,7 @@ Resultados medidos sobre la implementación de referencia (`govkit` v1.0.0):
 | Tamaño total de la KB | ≈16,4k tokens (media 746 por mini-contexto; máx. 948) |
 | Contexto típico enviado al LLM por revisión | mediana ≈5,7k tokens con presupuesto 6k (≈3–6k), cabe en un 7B con `num_ctx=8192` |
 | Latencia del motor determinista (repo de referencia, 73 archivos) | ≈0,5 s |
-| Pruebas automatizadas del kit | 51 (Python 3.9 → 3.13) |
+| Pruebas automatizadas del kit | 52 (Python 3.9 → 3.13) |
 
 El corpus documental completo (~19 páginas más lineamientos; del orden de decenas de miles de tokens, estimado) no cabe
 en la ventana útil de un modelo local 7B–14B y, aun si cupiera, diluiría la atención del modelo. La modularización
@@ -693,6 +693,6 @@ arquitectura/
     ├── lib/govkit/ (engine, declarative, plugins/*, kb/*, llm/*, report/*, scoring, scaffold, cli)
     ├── templates/data-product/ · templates/github/
     ├── examples/sales-transactions-anl-dp-cl/   ← Data Product de referencia (PASS en gate)
-    ├── tests/ (51 pruebas + fixtures omd/docs/portfolio)
+    ├── tests/ (52 pruebas + fixtures omd/docs/portfolio)
     └── vendor/yaml (PyYAML puro, MIT)
 ```

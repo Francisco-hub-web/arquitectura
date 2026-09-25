@@ -15,7 +15,7 @@ Data & AI Discipline Framework de Cencosud. Arquitectura: `docs/00-SAD-sistema-g
 | `kb/` | 22 mini-contextos `KB_00 … KB_21` + `_graph.yaml` (dependencias, tareas, proyecciones) |
 | `templates/` | Esqueleto de repo de Data Product (`govkit init`) y workflow reusable de CI |
 | `examples/sales-transactions-anl-dp-cl/` | Data Product de referencia completo (PASS en gate a producción) |
-| `tests/` | 51 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado) |
+| `tests/` | 52 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado) |
 | `vendor/yaml` | PyYAML 6.0.1 puro Python (MIT) para instalación sin pip |
 
 ## Comandos

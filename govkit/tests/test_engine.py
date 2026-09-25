@@ -221,6 +221,23 @@ class TestLifecycleAndPolicy(unittest.TestCase):
             self.assertIn("GOV-CTR-008", ids(res))
             self.assertIn("GOV-LCY-002", ids(res))
 
+    def test_monorepo_subfolder_diff_without_branch_attribution(self):
+        import shutil
+        with TempDir() as tmp:
+            mono = Path(tmp) / "lakehousev2"
+            root = mono / "products" / "sales-transactions-anl-dp-cl"
+            shutil.copytree(EXAMPLE, root)
+            git(mono, "init", "-q")
+            git(mono, "checkout", "-q", "-b", "rama-no-convencional")
+            git(mono, "add", "-A")
+            git(mono, "commit", "-qm", "commit no convencional")
+            edit_yaml(root / "contracts/output/sales_line_daily.yaml",
+                      lambda d: d["spec"].update(schema=d["spec"]["schema"][:-1]))
+            res = lint(root, base="HEAD")
+            self.assertIn("GOV-CTR-007", ids(res))          # el diff funciona dentro del monorepo
+            self.assertNotIn("GOV-NAM-007", ids(res))       # la rama del monorepo no se atribuye al producto
+            self.assertEqual(res.ctx.changed_files(), ["contracts/output/sales_line_daily.yaml"])
+
     def test_repo_level_stricter_severity_only(self):
         with TempDir() as tmp:
             root = copy_example(tmp)
