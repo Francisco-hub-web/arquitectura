@@ -1,0 +1,18 @@
+kind: Scorecard
+spec:
+  evaluated_at: 2026-09-20
+  evaluators:
+    - {role: business_owner, email: ana.perez@cencosud.com}
+    - {role: architect, email: paula.vera@cencosud.com}
+    - {role: data_steward, email: carla.rojas@cencosud.com}
+  pillars:
+    business_alignment:       {score: 4, evidence: ["UC-SAL-001", "metadata/catalog/data_product.yaml#spec.business"]}
+    product_definition:       {score: 4, evidence: ["metadata/catalog/data_product.yaml"]}
+    data_contract:            {score: 4, evidence: ["contracts/output/sales_line_daily.yaml", "tests/contract/"]}
+    data_quality:             {score: 4, evidence: ["quality/expectations/sales_transactions.yaml", "modeling/dbt/models/gold/schema.yml"]}
+    metadata_governance:      {score: 4, evidence: ["metadata/catalog/openmetadata.yaml", "metadata/catalog/glossary.yaml"]}
+    security_privacy:         {score: 4, evidence: ["PIA-CL-2026-0112", "infra/iam/"]}
+    observability_operations: {score: 4, evidence: ["observability/alarms/monitors.yaml", "docs/engineering/runbook.md"]}
+    dataops_cicd:             {score: 4, evidence: [".github/workflows/", "tests/"]}
+    semantic_readiness:       {score: 3, evidence: ["modeling/dbt/models/semantic/metrics.yml"]}
+    value_adoption:           {score: 3, evidence: ["consumidor validado: Semantic Layer Comercial Chile"]}

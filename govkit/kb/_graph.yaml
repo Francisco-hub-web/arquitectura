@@ -1,0 +1,48 @@
+# Mapa de dependencias y enrutamiento de la Base de Conocimiento (Mini-Contextos).
+# - depends_on (en cada KB): dependencia DURA → se carga siempre antes que el hijo (cierre transitivo).
+# - related   (en cada KB): dependencia BLANDA → se carga solo si queda presupuesto.
+# - tasks: tarea del desarrollador → mini-contextos núcleo (core) y complementarios (plus).
+# - projections: secciones que se proyectan según el modo (reduce tokens sin perder las reglas).
+version: 1
+kernel: KB_00            # siempre cargado
+tiers:
+  0: Núcleo
+  1: Estrategia y negocio
+  2: Producto y contrato
+  3: Arquitectura y modelado
+  4: Gobierno transversal
+  5: Consumo y AI
+  6: Operación y evolución
+  7: Plataforma específica
+priorities: {kernel: 100, task_core: 90, rule: 85, path: 80, query: 70, task_plus: 60, related: 40}
+projections:
+  review: [R, A, V, D]           # revisor semántico: reglas, anti-patrones, verificación, qué NO reevaluar
+  assist: [R, H, E, A]           # asistente de diseño: reglas, heurísticas, ejemplos
+  qa:     [R, H, A, E, V, G, D]  # preguntas abiertas: todo
+tasks:
+  nuevo_data_product:        {label: "Crear / definir un nuevo Data Product",            core: [KB_04, KB_01, KB_03], plus: [KB_05, KB_09, KB_10, KB_19, KB_18]}
+  caso_de_uso:               {label: "Formular o validar un caso de uso",                 core: [KB_02, KB_01],        plus: [KB_04, KB_13]}
+  priorizar:                 {label: "Priorizar portafolio / roadmap",                    core: [KB_01, KB_02],        plus: [KB_20]}
+  definir_ownership:         {label: "Definir ownership y dominio",                       core: [KB_03],               plus: [KB_01, KB_19]}
+  disenar_contrato:          {label: "Diseñar un Data Contract",                          core: [KB_05],               plus: [KB_07, KB_10]}
+  cambio_schema:             {label: "Cambiar schema / evaluar breaking change",          core: [KB_05],               plus: [KB_18, KB_17]}
+  integrar_consumidor:       {label: "Integrar un nuevo consumidor",                      core: [KB_05, KB_13],        plus: [KB_10]}
+  modelar_silver_odm:        {label: "Modelar Silver (ARTS ODM / canónico)",              core: [KB_07, KB_06],        plus: [KB_08, KB_05]}
+  modelar_gold_dimensional:  {label: "Modelar Gold dimensional",                          core: [KB_07, KB_06],        plus: [KB_12, KB_08, KB_05]}
+  definir_metrica_semantica: {label: "Definir métrica / semantic layer",                  core: [KB_12],               plus: [KB_09, KB_07]}
+  reglas_calidad:            {label: "Definir reglas y gates de calidad",                 core: [KB_08],               plus: [KB_17, KB_06]}
+  clasificar_seguridad_pii:  {label: "Clasificar seguridad / tratar PII",                 core: [KB_10],               plus: [KB_11, KB_12]}
+  iam_policies:              {label: "Diseñar rol y policies IAM",                        core: [KB_11],               plus: [KB_10]}
+  exponer_consumo:           {label: "Exponer consumo (BI, API, export, reverse ETL)",    core: [KB_13, KB_14],        plus: [KB_12, KB_10]}
+  feature_ml:                {label: "Definir features para ML",                          core: [KB_15],               plus: [KB_08, KB_10, KB_17]}
+  entrenar_modelo:           {label: "Dataset de entrenamiento / modelo",                 core: [KB_15],               plus: [KB_08, KB_17]}
+  rag_genai:                 {label: "Caso GenAI / RAG",                                  core: [KB_16],               plus: [KB_10, KB_15, KB_09]}
+  observabilidad_alertas:    {label: "Observabilidad y alertas",                          core: [KB_17],               plus: [KB_08, KB_18]}
+  pipeline_cicd_repo:        {label: "Repositorio, pipeline y CI/CD",                     core: [KB_18],               plus: [KB_11, KB_06]}
+  hotfix:                    {label: "Hotfix / contingencia",                             core: [KB_18],               plus: [KB_17, KB_05]}
+  promover_a_produccion:     {label: "Promover a producción (gate)",                      core: [KB_19, KB_04],        plus: [KB_20, KB_08, KB_10, KB_17]}
+  evolucionar_version:       {label: "Evolucionar / versionar el producto",               core: [KB_19, KB_05],        plus: [KB_18]}
+  retirar_consolidar:        {label: "Retirar o consolidar un producto",                  core: [KB_19],               plus: [KB_14, KB_03]}
+  scoring_evaluacion:        {label: "Evaluar scoring / madurez",                         core: [KB_20],               plus: [KB_19]}
+  catalogar_openmetadata:    {label: "Catalogar en OpenMetadata",                         core: [KB_09, KB_21],        plus: [KB_03]}
+  conexion_omd:              {label: "Conectar servicio AWS a OpenMetadata",              core: [KB_21],               plus: [KB_11]}

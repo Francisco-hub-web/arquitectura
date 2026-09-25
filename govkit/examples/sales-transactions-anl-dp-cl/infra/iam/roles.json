@@ -1,0 +1,106 @@
+{
+  "RoleName": "cencosud-role-sales-transactions-anl-dp-cl",
+  "AssumeRolePolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": [
+            "glue.amazonaws.com",
+            "lakeformation.amazonaws.com"
+          ]
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  },
+  "Policies": [
+    {
+      "PolicyName": "cencosud-policy-sales-transactions-anl-dp-cl-data",
+      "PolicyFile": "policy-data.json"
+    },
+    {
+      "PolicyName": "cencosud-policy-sales-transactions-anl-dp-cl-infra",
+      "PolicyFile": "policy-infra.json"
+    }
+  ],
+  "Tags": [
+    {
+      "Key": "ceco",
+      "Value": "CGO2005678"
+    },
+    {
+      "Key": "ambiente",
+      "Value": "dev"
+    },
+    {
+      "Key": "pais",
+      "Value": "cl"
+    },
+    {
+      "Key": "unidad-negocio",
+      "Value": "retail"
+    },
+    {
+      "Key": "bandera",
+      "Value": "jumbo"
+    },
+    {
+      "Key": "propietario",
+      "Value": "ana.perez@cencosud.com"
+    },
+    {
+      "Key": "creado-por",
+      "Value": "ana.perez@cencosud.com"
+    },
+    {
+      "Key": "aplicacion",
+      "Value": "glue"
+    },
+    {
+      "Key": "plataforma",
+      "Value": "Glue"
+    },
+    {
+      "Key": "proyecto",
+      "Value": "sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "nombre",
+      "Value": "cencosud-role-sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "Name",
+      "Value": "sales-transactions"
+    },
+    {
+      "Key": "cuenta",
+      "Value": "931122829065"
+    },
+    {
+      "Key": "repo",
+      "Value": "https://github.com/cencosud-data-cl/sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "tf-pipeline",
+      "Value": "yes"
+    },
+    {
+      "Key": "tf-module",
+      "Value": "iam-data-product"
+    },
+    {
+      "Key": "by",
+      "Value": "terraform"
+    },
+    {
+      "Key": "pep",
+      "Value": "CG-AB-2026-SL"
+    },
+    {
+      "Key": "apl",
+      "Value": "APL0457"
+    }
+  ]
+}

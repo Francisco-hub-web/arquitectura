@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cencosud.data/schemas/contract.schema.json",
+  "title": "Data Contract (entrada/salida)",
+  "description": "contracts/{input,output}/*.yaml — 06 §11 (Bloque 5) y 15-dataops-cicd §17. Mapeable a ODCS v3.",
+  "type": "object",
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "cencosud.data/v1"
+    },
+    "kind": {
+      "const": "DataContract"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "version": {
+          "type": "string",
+          "format": "semver"
+        },
+        "data_product": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "data_product",
+        "domain",
+        "owner",
+        "description"
+      ]
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "enum": [
+            "input",
+            "output"
+          ]
+        },
+        "layer": {
+          "enum": [
+            "bronze",
+            "silver",
+            "gold",
+            "semantic",
+            "serving",
+            "feature"
+          ]
+        },
+        "granularity": {
+          "type": "string"
+        },
+        "business_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "format": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "type"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "type": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string"
+              },
+              "pii": {
+                "type": "boolean"
+              },
+              "masking": {
+                "type": "string"
+              },
+              "classification": {
+                "type": "string"
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "sla": {
+          "type": "object"
+        },
+        "quality": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "classification": {
+          "enum": [
+            "publico",
+            "interno",
+            "confidencial",
+            "sensible_pii"
+          ]
+        },
+        "compatibility": {
+          "enum": [
+            "backward",
+            "forward",
+            "full",
+            "none"
+          ]
+        },
+        "change_policy": {
+          "type": "object"
+        },
+        "consumers": {
+          "type": "array"
+        },
+        "producer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "direction",
+        "schema",
+        "sla",
+        "classification",
+        "compatibility"
+      ]
+    }
+  }
+}

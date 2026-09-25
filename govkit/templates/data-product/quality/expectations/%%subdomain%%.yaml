@@ -1,0 +1,22 @@
+# Ficha de calidad (08 §12, §13, §14, §26) → derivar a tests ejecutables (dbt tests / tests/data_quality).
+kind: QualityRules
+metadata: {data_product: %%dp_id%%}
+spec:
+  gates:
+    silver: {criteria: "<COMPLETAR>", blocking: true}
+    gold: {criteria: "<COMPLETAR>", blocking: true}
+    serving: {criteria: "<COMPLETAR>", blocking: false}
+  alerting:
+    owner: "<COMPLETAR>"
+    channel: "<COMPLETAR>"
+    critical_action: bloquear_promocion
+  rules: []
+#   - name: clave_no_nula
+#     description: "..."
+#     dimension: completitud       # completitud|unicidad|consistencia|validez|integridad_referencial|freshness|exactitud|trazabilidad
+#     layer: silver
+#     object: entidad.campo
+#     threshold: "100%"
+#     severity: critica            # critica|alta|media|baja
+#     action: bloquear_pipeline
+#     owner: steward@cencosud.com

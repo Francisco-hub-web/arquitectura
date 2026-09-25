@@ -1,0 +1,33 @@
+# Modelo de scoring (19-scoring-model.md §10-§26). Pesos base suman 100.
+version: "2026.09"
+status: draft   # 19 está en "Draft para revisión" y pendiente de alinear con la Planilla de Certificación
+pillars:
+  business_alignment:       {label: "Business Alignment",          weight: 10, dama: "Data Governance"}
+  product_definition:       {label: "Product Definition",          weight: 10, dama: "Data Architecture"}
+  data_contract:            {label: "Data Contract & Interfaces",  weight: 8,  dama: "Data Integration"}
+  data_quality:             {label: "Data Quality",                weight: 12, dama: "Data Quality"}
+  metadata_governance:      {label: "Metadata & Governance",       weight: 10, dama: "Metadata Management"}
+  security_privacy:         {label: "Security & Privacy",          weight: 10, dama: "Data Security"}
+  observability_operations: {label: "Observability & Operations",  weight: 12, dama: "Data Operations"}
+  dataops_cicd:             {label: "DataOps & CI/CD",             weight: 10, dama: "Data Operations"}
+  semantic_readiness:       {label: "Semantic Readiness",          weight: 6,  dama: "DW / BI"}
+  ai_ml_readiness:          {label: "AI/ML Readiness",             weight: 6,  dama: "Advanced Analytics / AI"}
+  value_adoption:           {label: "Value & Adoption",            weight: 6,  dama: "DW / BI"}
+dimensions:
+  madurez: [business_alignment, product_definition, data_contract, metadata_governance, semantic_readiness, ai_ml_readiness]
+  salud_operativa: [data_quality, security_privacy, observability_operations, dataops_cicd]
+  readiness_valor: [value_adoption, business_alignment, semantic_readiness, ai_ml_readiness, metadata_governance]
+# 19 §25 indica "mayor peso relativo" por tipo sin cuantificarlo: multiplicador propuesto 1.5 (a calibrar).
+type_emphasis:
+  multiplier: 1.5
+  analytical:  [semantic_readiness, data_quality, metadata_governance]
+  operational: [data_contract, security_privacy, observability_operations]
+  ai_ml:       [ai_ml_readiness, data_quality, metadata_governance, observability_operations]
+classification:
+  - {min: 4.5, label: "Strategic / Industrialized Data Product"}
+  - {min: 4.0, label: "Data Product avanzado"}
+  - {min: 3.0, label: "Data Product gestionado"}
+  - {min: 2.0, label: "Data Product básico"}
+  - {min: 0.0, label: "Data Asset / Producto inmaduro"}
+# Un BLOCKER abierto en el pilar limita su pre-score (08 §24 "Minimum Blockers de Certification Gate").
+blocker_cap: 2.0

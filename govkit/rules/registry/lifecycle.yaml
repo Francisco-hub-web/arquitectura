@@ -1,0 +1,56 @@
+# Ciclo de vida del Data Product (18-data-product-lifecycle.md §9-§22, §27; 19-scoring-model.md §27).
+# `group` agrupa estados para la matriz de escalamiento de severidad del catálogo de reglas.
+version: "2026.09"
+default_state: en_desarrollo   # estado asumido si el repo aún no declara spec.lifecycle.state
+groups:
+  ideacion:   "Identificado → Priorizado: se valida valor, capacidad y dominio"
+  diseno:     "En diseño: debe cumplir Definition of Ready para pasar a desarrollo"
+  desarrollo: "En desarrollo: implementación bajo playbook"
+  gate:       "Listo para producción: gate previo a operación corporativa"
+  operacion:  "Productivo / En evolución: operación bajo SLA/SLO"
+  salida:     "Consolidación / Retiro: gobierno de la salida"
+states:
+  identificado:           {order: 1,  group: ideacion,   catalog_status: candidate}
+  en_definicion:          {order: 2,  group: ideacion,   catalog_status: candidate}
+  candidato_priorizacion: {order: 3,  group: ideacion,   catalog_status: candidate}
+  priorizado:             {order: 4,  group: ideacion,   catalog_status: candidate}
+  en_diseno:              {order: 5,  group: diseno,     catalog_status: candidate}
+  en_desarrollo:          {order: 6,  group: desarrollo, catalog_status: candidate}
+  listo_para_produccion:  {order: 7,  group: gate,       catalog_status: active}
+  productivo:             {order: 8,  group: operacion,  catalog_status: in_production}
+  en_evolucion:           {order: 9,  group: operacion,  catalog_status: evolving}
+  en_consolidacion:       {order: 10, group: salida,     catalog_status: evolving}
+  en_retiro:              {order: 11, group: salida,     catalog_status: deprecated}
+  retirado:               {order: 12, group: salida,     catalog_status: retired}
+# Transiciones permitidas (18 §22). Se admite retroceder un paso para retrabajo.
+transitions:
+  identificado:           [en_definicion, retirado]
+  en_definicion:          [candidato_priorizacion, identificado, retirado]
+  candidato_priorizacion: [priorizado, en_definicion, en_consolidacion, retirado]
+  priorizado:             [en_diseno, candidato_priorizacion]
+  en_diseno:              [en_desarrollo, priorizado]
+  en_desarrollo:          [listo_para_produccion, en_diseno]
+  listo_para_produccion:  [productivo, en_desarrollo]
+  productivo:             [en_evolucion, en_consolidacion, en_retiro]
+  en_evolucion:           [productivo, en_consolidacion, en_retiro]
+  en_consolidacion:       [en_retiro, productivo]
+  en_retiro:              [retirado, productivo]
+  retirado:               []
+# Mínimos de scoring por estado (19 §27). Estados no listados heredan el anterior.
+scoring_minimums:
+  en_definicion:         {business_alignment: 3, product_definition: 3}
+  en_diseno:             {business_alignment: 3, product_definition: 3}
+  en_desarrollo:         {product_definition: 3, data_contract: 2, data_quality: 2, security_privacy: 2, dataops_cicd: 2}
+  listo_para_produccion: {data_quality: 3, metadata_governance: 3, security_privacy: 3, observability_operations: 3, dataops_cicd: 3}
+  productivo:            {data_quality: 3, metadata_governance: 3, security_privacy: 3, observability_operations: 3, dataops_cicd: 3}
+  en_evolucion:          {data_quality: 3, metadata_governance: 3, security_privacy: 3, observability_operations: 3, dataops_cicd: 3}
+strategic_minimums: {global: 4, metadata_governance: 4, data_quality: 4, observability_operations: 4, value_adoption: 4}
+# Alias de estados usados en 06-data-product-definition.md §7 y en el catálogo (18 §27).
+aliases:
+  "En definición": en_definicion
+  "Priorizado": priorizado
+  "En diseño": en_diseno
+  "En desarrollo": en_desarrollo
+  "Productivo": productivo
+  "En evolución": en_evolucion
+  "En retiro": en_retiro

@@ -1,0 +1,13 @@
+name: %%subdomain_snake%%
+version: 0.1.0
+config-version: 2
+profile: %%subdomain_snake%%
+model-paths: ["models"]
+macro-paths: ["macros"]
+models:
+  %%subdomain_snake%%:
+    +file_format: iceberg
+    silver:
+      +schema: silver
+    gold:
+      +schema: gold

@@ -1,0 +1,4046 @@
+# =====================================================================================================
+#  CATÁLOGO DE REGLAS DE GOBERNANZA — "Rules as Code"
+#  Fuente única de verdad del Sistema de Gobernanza Híbrido (motor determinista + KB semántica).
+#
+#  Cada regla declara:
+#    nature      D = Determinista (AST / regex / schema / grafo / diff) · H = Híbrida (presencia D + adecuación S)
+#                S = Semántica (LLM local + KB, consultiva)            · O = Organizacional (revisión humana)
+#    severity    severidad base (BLOCKER > HIGH > MEDIUM > LOW > INFO). Equivalencia DQ (08 §13):
+#                crítica→BLOCKER · alta→HIGH · media→MEDIUM · baja→LOW
+#    stages      escalamiento por grupo de ciclo de vida (rules/registry/lifecycle.yaml) — OFF = no se evalúa
+#    enforcement pre-commit · pr · gate · catalog · periodic · runtime
+#    source      documento + sección + cita normativa (trazabilidad regla → lineamiento)
+#    kb          mini-contextos que explican la regla (remediación asistida / revisión semántica)
+#    check       declarativo (exists|field|each|count|filename|regex_scan|composite) o plugin|post
+# =====================================================================================================
+version: 1
+ruleset_version: "2026.09.1"
+framework: "Cencosud Data & AI Discipline Framework"
+
+# Perfiles de escalamiento reutilizables (grupos: ideacion, diseno, desarrollo, gate, operacion, salida)
+profiles:
+  gate_blocker: &gate_blocker {ideacion: "OFF", diseno: LOW, desarrollo: MEDIUM, gate: BLOCKER, operacion: BLOCKER, salida: LOW}
+  draft_ok:     &draft_ok     {ideacion: LOW, diseno: MEDIUM}   # borradores tolerados antes de desarrollo
+  build_up:     &build_up     {ideacion: "OFF", diseno: MEDIUM, desarrollo: HIGH, gate: BLOCKER, operacion: BLOCKER, salida: LOW}
+  design_up:    &design_up    {ideacion: LOW, diseno: MEDIUM, desarrollo: HIGH, gate: HIGH, operacion: HIGH, salida: LOW}
+  ops_high:     &ops_high     {ideacion: "OFF", diseno: "OFF", desarrollo: LOW, gate: HIGH, operacion: HIGH, salida: "OFF"}
+  from_design:  &from_design  {ideacion: "OFF", salida: LOW}
+  from_build:   &from_build   {ideacion: "OFF", diseno: "OFF", salida: LOW}
+  run_only:     &run_only     {ideacion: "OFF", diseno: "OFF", desarrollo: "OFF", gate: "OFF", salida: "OFF"}
+  iam_build:    &iam_build    {ideacion: LOW, diseno: MEDIUM}   # la infraestructura se exige desde desarrollo
+
+# Artefactos lógicos → globs (sobrescribibles por repo en .govkit.yaml → artifacts)
+artifacts:
+  data_product: [metadata/catalog/data_product.yaml, metadata/catalog/data_product.yml, metadata/data_product.yaml]
+  glossary: [metadata/catalog/glossary.yaml, metadata/glossary.yaml]
+  openmetadata: [metadata/catalog/openmetadata.yaml, metadata/openmetadata.yaml]
+  scorecard: [metadata/catalog/scorecard.yaml]
+  features: ["metadata/catalog/ai/features*.yaml"]
+  training_sets: ["metadata/catalog/ai/training*.yaml"]
+  inference: ["metadata/catalog/ai/inference*.yaml"]
+  rag: ["metadata/catalog/ai/rag*.yaml"]
+  dimensions: ["metadata/catalog/semantic/dimensions*.yaml"]
+  quality_rules: ["quality/expectations/*.yaml", "quality/expectations/*.yml", metadata/data_quality.yaml]
+  contracts_output: ["contracts/output/**/*.yaml", "contracts/output/**/*.yml"]
+  contracts_input: ["contracts/input/**/*.yaml", "contracts/input/**/*.yml"]
+  contracts_interface: ["contracts/input/**/*.yaml", "contracts/input/**/*.yml", "contracts/output/**/*.yaml", "contracts/output/**/*.yml"]
+  contracts_gold: ["contracts/gold/**/*.yaml", "contracts/gold/**/*.yml"]
+  contracts_all: ["contracts/bronze/**/*.yaml", "contracts/silver/**/*.yaml", "contracts/gold/**/*.yaml",
+                  "contracts/semantic/**/*.yaml", "contracts/input/**/*.yaml", "contracts/output/**/*.yaml",
+                  "contracts/**/*.yml"]
+  monitors: ["observability/alarms/**/*.yaml", "observability/alarms/**/*.yml"]
+  health: ["observability/health*.yaml", "observability/alarms/health*.yaml"]
+  dbt_yml: ["modeling/dbt/models/**/*.yml", "modeling/dbt/models/**/*.yaml"]
+  asl: ["pipelines/orchestration/step_function/**/*.json"]
+  iam_role: ["**/roles.json"]
+  iam_policy_data: ["**/policy-data.json"]
+  iam_policy_infra: ["**/policy-infra.json"]
+  use_cases: ["**/use_cases/*.yaml", "**/use_cases/*.yml"]
+  omd_access_roles: ["**/roles.json"]
+  omd_env_policies: ["**/*omdata-policy*.json"]
+  omd_ingestion: ["**/*.yaml", "**/*.yml"]
+  framework_docs: ["**/*.md"]
+  portfolio_dps: ["**/metadata/catalog/data_product.yaml"]
+
+rules:
+# =====================================================================================================
+# STR · ESTRUCTURA DE REPOSITORIO  (Estructura de Repositorio; 15-dataops-cicd §13-§14, §23)
+# =====================================================================================================
+- id: GOV-STR-001
+  title: Carpetas raíz estándar del repositorio
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  source: {doc: lineamientos/estructura-repositorio.md, section: "Importante", quote: "Los nombres de carpetas y su propósito son fijos y no deben modificarse."}
+  kb: [KB_18]
+  check: {kind: exists, all: [".github/workflows/", contracts/, docs/, metadata/, modeling/, observability/, pipelines/, publishing/, quality/, shared/, src/, tests/]}
+  remediation: "Crear la carpeta faltante (con .gitkeep si aún está vacía) o regenerar el esqueleto con `govkit init`."
+
+- id: GOV-STR-002
+  title: Subcarpetas estándar (contracts, docs, tests, src, pipelines)
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  stages: {ideacion: LOW}
+  source: {doc: lineamientos/estructura-repositorio.md, section: "Detalle por Carpeta"}
+  kb: [KB_18]
+  check:
+    kind: exists
+    all: [contracts/bronze/, contracts/silver/, contracts/gold/dim/, contracts/gold/fact/, contracts/semantic/, contracts/input/,
+          contracts/output/, contracts/policies/, docs/adr/, docs/architecture/, docs/dbdiagram/, docs/engineering/,
+          tests/contract/, tests/data_quality/, tests/integration/, tests/smoke/, tests/unit/, pipelines/orchestration/step_function/,
+          src/bronze/, src/silver/, src/gold/, src/semantic/, src/common/triggers/]
+  remediation: "Completar la estructura estándar; las carpetas vacías se versionan con .gitkeep."
+
+- id: GOV-STR-003
+  title: Archivos raíz obligatorios (README.md, CODEOWNERS)
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  source: {doc: lineamientos/estructura-repositorio.md, section: "Archivos Raíz"}
+  kb: [KB_18]
+  check: {kind: exists, all: [README.md, CODEOWNERS]}
+  remediation: "Agregar README.md (propósito, owners, branches) y CODEOWNERS (revisión obligatoria por carpeta)."
+
+- id: GOV-STR-004
+  title: Workflows CI/CD pr.yml y deploy.yml
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  stages: {ideacion: MEDIUM}
+  source: {doc: lineamientos/estructura-repositorio.md, section: ".github/workflows/"}
+  kb: [KB_18]
+  check: {kind: exists, all: [.github/workflows/pr.yml, .github/workflows/deploy.yml]}
+  remediation: "Agregar los workflows usando los reusable workflows de `base-workflows`."
+
+- id: GOV-STR-005
+  title: Carpetas raíz no estándar
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: LOW
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  source: {doc: lineamientos/estructura-repositorio.md, section: "Importante"}
+  kb: [KB_18]
+  check: {kind: plugin, name: structure.unknown_top_level}
+  remediation: "Mover el contenido a la carpeta estándar correspondiente o documentar la excepción con ADR + waiver."
+
+- id: GOV-STR-006
+  title: CHANGELOG.md del producto
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  stages: {ideacion: "OFF", diseno: LOW}
+  source: {doc: 15-dataops-cicd.md, section: "§14, §23", quote: "Componentes recomendados: README.md, CHANGELOG.md, CODEOWNERS..."}
+  kb: [KB_18]
+  check: {kind: exists, all: [CHANGELOG.md]}
+  remediation: "Agregar CHANGELOG.md (formato Keep a Changelog) alineado a las versiones semánticas del producto."
+
+- id: GOV-STR-007
+  title: README con secciones mínimas
+  nature: H
+  category: estructura
+  pillar: product_definition
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  requires: {glob: ["README.md"]}
+  source: {doc: 15-dataops-cicd.md, section: "§23", quote: "propósito del producto de datos, inputs y outputs, owners, SLA, runbook..."}
+  kb: [KB_18, KB_04]
+  check: {kind: plugin, name: structure.readme_sections}
+  semantic_question: "¿El README explica el propósito de negocio del Data Product de forma comprensible para un consumidor no técnico?"
+  remediation: "Agregar secciones: Propósito, Owners, Inputs/Outputs, SLA, Branches/flujo de trabajo, Runbook."
+
+- id: GOV-STR-008
+  title: Runbook operativo
+  nature: D
+  category: estructura
+  pillar: observability_operations
+  severity: HIGH
+  technique: path
+  enforcement: [pr, gate]
+  scope: repo
+  stages: *ops_high
+  source: {doc: 15-dataops-cicd.md, section: "§23", quote: "Un producto de datos sin runbook básico ni ownership visible no está listo para operación enterprise."}
+  kb: [KB_18, KB_17]
+  check: {kind: exists, complete: true, any: ["docs/engineering/runbook*.md", "docs/engineering/**/runbook*.md", "docs/runbook*.md"]}
+  remediation: "Crear docs/engineering/runbook.md: contactos, SLA, dependencias, fallas típicas, reproceso, rollback."
+
+- id: GOV-STR-009
+  title: Proyecto dbt completo
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  when: [{exists: "modeling/dbt/models/**/*.sql"}]
+  source: {doc: lineamientos/estructura-repositorio.md, section: "modeling/"}
+  kb: [KB_18, KB_07]
+  check: {kind: exists, all: [modeling/dbt/dbt_project.yml, modeling/dbt/profiles.yml, modeling/dbt/requirements.txt]}
+  remediation: "Agregar dbt_project.yml, profiles.yml (targets Glue/Iceberg) y requirements.txt (dbt-glue)."
+
+- id: GOV-STR-010
+  title: Definiciones Step Functions válidas
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: schema
+  enforcement: [pre-commit, pr]
+  requires: {artifact: asl}
+  source: {doc: lineamientos/estructura-repositorio.md, section: "pipelines/", quote: "La orquestación principal del producto se define como Step Functions."}
+  kb: [KB_18]
+  check: {kind: plugin, name: structure.asl_valid}
+  remediation: "Corregir la definición ASL: StartAt debe existir en States y todo Next debe apuntar a un estado definido."
+
+- id: GOV-STR-011
+  title: Formato de ADRs
+  nature: D
+  category: estructura
+  pillar: product_definition
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  requires: {glob: ["docs/adr/*.md"]}
+  source: {doc: lineamientos/estructura-repositorio.md, section: "docs/", quote: "Toda decisión técnica significativa ... debe documentarse como un ADR en docs/adr/."}
+  kb: [KB_18]
+  check: {kind: plugin, name: structure.adr_format}
+  remediation: "Nombrar NNNN-titulo.md e incluir Contexto, Decisión y Consecuencias."
+
+- id: GOV-STR-012
+  title: Modelo lógico/físico documentado (DBML)
+  nature: D
+  category: estructura
+  pillar: product_definition
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  stages: *from_design
+  source: {doc: lineamientos/estructura-repositorio.md, section: "docs/dbdiagram"}
+  kb: [KB_07]
+  check: {kind: exists, complete: true, any: ["docs/dbdiagram/*.dbml", "docs/dbdiagram/**/*.dbml"]}
+  remediation: "Versionar el modelo lógico y físico en docs/dbdiagram/*.dbml."
+
+- id: GOV-STR-013
+  title: Artefactos YAML/JSON sintácticamente válidos
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pre-commit, pr]
+  source: {doc: 15-dataops-cicd.md, section: "§16", quote: "Un PR debería validar, como mínimo: linting..."}
+  kb: [KB_18]
+  check: {kind: plugin, name: structure.syntax}
+  remediation: "Corregir la sintaxis en la línea indicada; un artefacto que no parsea deja sin efecto el resto de validaciones."
+
+# =====================================================================================================
+# NAM · NOMENCLATURA
+# =====================================================================================================
+- id: GOV-NAM-001
+  title: Nombre de repositorio {domain}-{subdomain}-{type}-dp-{country}
+  nature: D
+  category: nomenclatura
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  source: {doc: lineamientos/estructura-repositorio.md, section: "Convención de nombre del repositorio", quote: "Ejemplo: product-master-txd-dp-cl"}
+  kb: [KB_18]
+  check: {kind: plugin, name: naming.repo_name}
+  remediation: "Renombrar el repositorio (ej. `sales-transactions-anl-dp-cl`) o fijar `repo_name` en .govkit.yaml si el remoto difiere."
+
+- id: GOV-NAM-002
+  title: Dominio del repositorio registrado
+  nature: D
+  category: nomenclatura
+  pillar: metadata_governance
+  severity: HIGH
+  technique: graph
+  enforcement: [pr]
+  scope: repo
+  source: {doc: 01-data-principles.md, section: "§7", quote: "Los límites de dominio de datos son definidos y mantenidos por el Data Council corporativo."}
+  kb: [KB_03]
+  check: {kind: plugin, name: naming.repo_domain}
+  remediation: "Usar un dominio canónico (rules/registry/domains.yaml) o solicitar su alta al Data Council."
+
+- id: GOV-NAM-003
+  title: Nomenclatura de Glue jobs
+  nature: D
+  category: nomenclatura
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pre-commit, pr]
+  source: {doc: lineamientos/estructura-repositorio.md, section: "src/ · Regla de nomenclatura de jobs", quote: "job_{zone}_{env}_{domain}_{name}_{granularity}.py"}
+  kb: [KB_18]
+  check:
+    kind: filename
+    patterns: [{glob: "src/**/glue/*.py", regex: '^job_(brz|slv|gld|smt)_(dev|stg|qa|prd)_[a-z0-9]+_[a-z0-9_]+\.py$', convention: "job_{zone}_{env}_{domain}_{name}_{granularity}.py"}]
+  remediation: "Renombrar el job, p.ej. `job_slv_prd_txd_arts_odm_dbt_decoupling.py`."
+
+- id: GOV-NAM-004
+  title: Nomenclatura de Lambdas
+  nature: D
+  category: nomenclatura
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pre-commit, pr]
+  source: {doc: lineamientos/estructura-repositorio.md, section: "src/ · Regla de nomenclatura de lambdas", quote: "lambda_{zone}_{env}_{domain}_{name}.py"}
+  kb: [KB_18]
+  check:
+    kind: filename
+    patterns: [{glob: "src/**/lambda/*.py", regex: '^lambda_(brz|slv|gld|smt)_(dev|stg|qa|prd)_[a-z0-9]+_[a-z0-9_]+\.py$', convention: "lambda_{zone}_{env}_{domain}_{name}.py"}]
+  remediation: "Renombrar la lambda, p.ej. `lambda_slv_prd_txd_sync_config_dynamo.py`."
+
+- id: GOV-NAM-005
+  title: Modelos Gold dbt dim_* / fact_*
+  nature: D
+  category: nomenclatura
+  pillar: product_definition
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pre-commit, pr]
+  source: {doc: lineamientos/estructura-repositorio.md, section: "modeling/ · models/gold", quote: "dim_*.sql → Dimensiones · fact_*.sql → Tablas de hechos"}
+  kb: [KB_07]
+  check:
+    kind: filename
+    patterns: [{glob: "modeling/dbt/models/gold/**/*.sql", regex: '^(dim|fact)_[a-z0-9_]+\.sql$', convention: "dim_<entidad>.sql | fact_<proceso>.sql"}]
+  remediation: "Renombrar el modelo Gold con prefijo dim_ (dimensión) o fact_ (hecho)."
+
+- id: GOV-NAM-006
+  title: Contratos Gold ubicados según tipo (dim/fact)
+  nature: D
+  category: nomenclatura
+  pillar: data_contract
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  source: {doc: lineamientos/estructura-repositorio.md, section: "contracts/gold/dim · contracts/gold/fact"}
+  kb: [KB_05]
+  check:
+    kind: filename
+    patterns:
+      - {glob: "contracts/gold/dim/*.y*ml", regex: '^dim_[a-z0-9_]+\.ya?ml$', convention: "contracts/gold/dim/dim_*.yaml"}
+      - {glob: "contracts/gold/fact/*.y*ml", regex: '^fact_[a-z0-9_]+\.ya?ml$', convention: "contracts/gold/fact/fact_*.yaml"}
+  remediation: "Mover el contrato a la subcarpeta que corresponde a su tipo."
+
+- id: GOV-NAM-007
+  title: Convención de ramas <tipo>/<dominio>/<descripcion>
+  nature: D
+  category: nomenclatura
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  source: {doc: lineamientos/estructura-repositorio.md, section: "Convención de branches", quote: "<tipo>/<dominio>/<descripcion-corta>"}
+  kb: [KB_18]
+  check: {kind: plugin, name: naming.branch}
+  remediation: "Crear la rama como `feat/<dominio>/<descripcion>` (feat|fix|hotfix|chore)."
+
+- id: GOV-NAM-008
+  title: Conventional Commits
+  nature: D
+  category: nomenclatura
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  source: {doc: 15-dataops-cicd.md, section: "§20", quote: "El mensaje del commit describe el tipo de cambio y gatilla la regla de versionamiento"}
+  kb: [KB_18, KB_05]
+  check: {kind: plugin, name: naming.commits}
+  remediation: "Usar `tipo(scope): descripción`; `!` o `BREAKING CHANGE:` para cambios MAJOR."
+
+- id: GOV-NAM-009
+  title: Nombre del rol IAM cencosud-role-{repo}
+  nature: D
+  category: nomenclatura
+  pillar: security_privacy
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_role}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Convención de Nombres", quote: "Role: cencosud-role-{github-dp-name}"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.naming_role}
+  remediation: "Renombrar RoleName a `cencosud-role-<nombre-del-repo>`."
+
+- id: GOV-NAM-010
+  title: Nombres de policies cencosud-policy-{repo}-data|infra
+  nature: D
+  category: nomenclatura
+  pillar: security_privacy
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_role}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Convención de Nombres"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.naming_policies}
+  remediation: "Nombrar las policies `cencosud-policy-<repo>-data` y `cencosud-policy-<repo>-infra` y adjuntarlas al rol."
+
+- id: GOV-NAM-011
+  title: Buckets del lakehouse cencosud-{pais}-dlk-{zona}-{dominio}-*
+  nature: D
+  category: nomenclatura
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Policy DATA · Ejemplo", quote: "arn:aws:s3:::cencosud-pe-dlk-brz-{domain}-*"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.bucket_naming}
+  remediation: "Referenciar buckets del lakehouse con el patrón corporativo (el aislamiento por nombre sustenta la regla de wildcard)."
+
+- id: GOV-NAM-012
+  title: Databases Glue dlk_{zona}_{pais}_{dominio}_{nombre}
+  nature: D
+  category: nomenclatura
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Regla de Wildcard", quote: "Database Glue exclusiva (dlk_brz_pe_cus_raw)"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.glue_db_naming}
+  remediation: "Usar databases con patrón dlk_{zona}_{pais}_{dominio}_{nombre}."
+
+- id: GOV-NAM-013
+  title: Nombre del Data Product en kebab-case
+  nature: D
+  category: nomenclatura
+  pillar: metadata_governance
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  source: {doc: 09-metadata-governance.md, section: "§16"}
+  kb: [KB_09]
+  check: {kind: field, target: data_product, path: metadata.name, assert: {regex: '^[a-z0-9]+(-[a-z0-9]+)*$'}}
+  remediation: "Usar kebab-case estable (es la clave de la entidad en el catálogo)."
+
+- id: GOV-NAM-014
+  title: Campos de contratos en snake_case
+  nature: D
+  category: nomenclatura
+  pillar: data_contract
+  severity: LOW
+  technique: regex
+  enforcement: [pre-commit, pr]
+  stages: *draft_ok
+  source: {doc: 06-data-product-definition.md, section: "§11"}
+  kb: [KB_05]
+  check: {kind: each, target: contracts_all, path: spec.schema, noun: campo, keys: {name: {regex: '^[a-z][a-z0-9_]*$'}}}
+  remediation: "Renombrar el campo a snake_case (implica versión MAJOR si el contrato ya está publicado)."
+
+# =====================================================================================================
+# DPD · DEFINICIÓN DEL DATA PRODUCT  (01 §1-§2, §12; 06-data-product-definition)
+# =====================================================================================================
+- id: GOV-DPD-001
+  title: Ficha del Data Product versionada (metadata as code)
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: BLOCKER
+  technique: path
+  enforcement: [pr, gate, catalog]
+  scope: repo
+  source: {doc: 01-data-principles.md, section: "§3", quote: "Sin metadata registrada en el catálogo corporativo, el dato no existe para el ecosistema."}
+  kb: [KB_04, KB_09]
+  check: {kind: exists, any: [metadata/catalog/data_product.yaml, metadata/catalog/data_product.yml, metadata/data_product.yaml],
+          message: "No existe la ficha del Data Product (metadata/catalog/data_product.yaml)"}
+  remediation: "Crear metadata/catalog/data_product.yaml (plantilla en `govkit init`) — es el origen de la sincronización a OpenMetadata."
+
+- id: GOV-DPD-002
+  title: Ficha conforme al esquema canónico
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: schema
+  enforcement: [pre-commit, pr]
+  source: {doc: 06-data-product-definition.md, section: "§7-§26", quote: "Este documento debe actuar como la ficha maestra del Data Product"}
+  kb: [KB_04]
+  check: {kind: plugin, name: product.schema_valid}
+  remediation: "Ajustar la ficha a schemas/data_product.schema.json (campos desconocidos: usar prefijo x-)."
+
+- id: GOV-DPD-003
+  title: ID único del Data Product
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  source: {doc: 06-data-product-definition.md, section: "§7 (Bloque 1)", quote: "ID único"}
+  kb: [KB_04]
+  check: {kind: field, target: data_product, path: metadata.id, assert: {regex: '^DP-[A-Z0-9]+(-[A-Z0-9]+)+$'}}
+  remediation: "Usar un ID estable, p.ej. DP-SALES-TRX-CL-001."
+
+- id: GOV-DPD-004
+  title: Versión semántica del Data Product
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  source: {doc: 01-data-principles.md, section: "§1", quote: "Un Data Product requiere: owner de negocio, SLA ..., consumidores registrados, versión semántica y métricas de uso activo."}
+  kb: [KB_04, KB_05]
+  check: {kind: field, target: data_product, path: metadata.version, assert: {semver: true}}
+  remediation: "Declarar metadata.version como MAJOR.MINOR.PATCH (lo actualiza el pipeline según Conventional Commits)."
+
+- id: GOV-DPD-005
+  title: Tipo de Data Product
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 06-data-product-definition.md, section: "§7 Tipos sugeridos"}
+  kb: [KB_04]
+  check: {kind: field, target: data_product, path: spec.type, assert: {enum: [analytical, operational, saas_driven, ai_ml, semantic_metrics]}}
+  remediation: "Declarar spec.type ∈ {analytical, operational, saas_driven, ai_ml, semantic_metrics}."
+
+- id: GOV-DPD-006
+  title: Rol del Data Product (maestro | consumo)
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§8.3", quote: "Data Product Maestro ... Data Product Analítico de Consumo"}
+  kb: [KB_04, KB_13]
+  check: {kind: field, target: data_product, path: spec.role, assert: {enum: [maestro, consumo]}}
+  remediation: "Declarar spec.role: maestro (publica datos de dominio) o consumo (tablero/API/export/activación)."
+
+- id: GOV-DPD-007
+  title: Owner de negocio definido
+  nature: D
+  category: data_product
+  pillar: business_alignment
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pr, gate, catalog]
+  stages: {ideacion: HIGH}
+  source: {doc: 01-data-principles.md, section: "§1", quote: "La ausencia de cualquiera de estos elementos invalida el Data Product."}
+  kb: [KB_03, KB_04]
+  check: {kind: field, target: data_product, path: spec.ownership.business_owner, assert: {not_placeholder: true}}
+  remediation: "Asignar spec.ownership.business_owner (email corporativo del dueño del valor)."
+
+- id: GOV-DPD-008
+  title: Ownership multi-rol (Data Owner, Steward, Technical Owner, Arquitecto)
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: {ideacion: LOW, diseno: MEDIUM, salida: MEDIUM}
+  source: {doc: 06-data-product-definition.md, section: "§10 (Bloque 4)", quote: "Sin esta claridad, el producto no está listo para avanzar."}
+  kb: [KB_03]
+  check: {kind: field, target: data_product, paths: [spec.ownership.data_owner, spec.ownership.data_steward, spec.ownership.technical_owner, spec.ownership.architect], assert: {not_placeholder: true}}
+  remediation: "Completar data_owner, data_steward, technical_owner y architect."
+
+- id: GOV-DPD-009
+  title: Security contact cuando hay PII
+  nature: D
+  category: data_product
+  pillar: security_privacy
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: *from_design
+  when: [{dp: spec.classification.pii, equals: true}]
+  source: {doc: 06-data-product-definition.md, section: "§10", quote: "Security contact (si aplica)"}
+  kb: [KB_03, KB_10]
+  check: {kind: field, target: data_product, path: spec.ownership.security_contact, assert: {not_placeholder: true}}
+  remediation: "Asignar spec.ownership.security_contact para productos con datos personales."
+
+- id: GOV-DPD-010
+  title: ML/AI owner en productos AI/ML
+  nature: D
+  category: data_product
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: *from_design
+  when: [{dp: spec.type, equals: ai_ml}]
+  source: {doc: 06-data-product-definition.md, section: "§10", quote: "ML / AI owner (si aplica)"}
+  kb: [KB_03, KB_15]
+  check: {kind: field, target: data_product, path: spec.ownership.ml_owner, assert: {not_placeholder: true}}
+  remediation: "Asignar spec.ownership.ml_owner."
+
+- id: GOV-DPD-011
+  title: Consumidores registrados
+  nature: D
+  category: data_product
+  pillar: value_adoption
+  severity: BLOCKER
+  technique: count
+  enforcement: [pr, gate]
+  stages: {ideacion: MEDIUM, diseno: HIGH, desarrollo: HIGH, salida: LOW}
+  source: {doc: 01-data-principles.md, section: "§1", quote: "Todo Data Product debe tener propósito, owner, consumidores definidos y métricas de adopción."}
+  kb: [KB_04]
+  check: {kind: field, target: data_product, path: spec.consumers, assert: {min_items: 1}}
+  remediation: "Registrar al menos un consumidor (nombre, equipo, canal, estado)."
+
+- id: GOV-DPD-012
+  title: Consumidor activo o validado para certificar
+  nature: D
+  category: data_product
+  pillar: value_adoption
+  severity: BLOCKER
+  technique: schema
+  enforcement: [gate]
+  stages: {ideacion: "OFF", diseno: "OFF", desarrollo: "OFF", salida: "OFF"}
+  source: {doc: 06-data-product-definition.md, section: "§25 (Bloque 19)", quote: "consumidor activo o validado"}
+  kb: [KB_04, KB_20]
+  check: {kind: plugin, name: product.active_consumer}
+  remediation: "Validar con al menos un consumidor y marcar su estado como `validado` o `activo`."
+
+- id: GOV-DPD-013
+  title: SLA declarado (frecuencia, freshness, disponibilidad)
+  nature: D
+  category: data_product
+  pillar: observability_operations
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: {ideacion: LOW, diseno: MEDIUM, desarrollo: HIGH, gate: BLOCKER, operacion: BLOCKER, salida: LOW}
+  source: {doc: 06-data-product-definition.md, section: "§23 (Bloque 17)", quote: "frecuencia de actualización, freshness máxima, disponibilidad esperada"}
+  kb: [KB_04, KB_17]
+  check: {kind: field, target: data_product, paths: [spec.sla.frequency, spec.sla.freshness, spec.sla.availability], assert: {not_placeholder: true}}
+  remediation: "Declarar spec.sla (freshness preferentemente ISO-8601, p.ej. PT24H, o hora límite 07:00)."
+
+- id: GOV-DPD-014
+  title: Métricas de uso activo declaradas
+  nature: D
+  category: data_product
+  pillar: value_adoption
+  severity: HIGH
+  technique: count
+  enforcement: [pr, gate]
+  stages: {ideacion: "OFF", diseno: LOW, desarrollo: MEDIUM, salida: LOW}
+  source: {doc: 01-data-principles.md, section: "§1", quote: "métricas de uso activo"}
+  kb: [KB_04, KB_20]
+  check: {kind: field, target: data_product, path: spec.adoption.metrics, assert: {min_items: 1}}
+  remediation: "Declarar cómo se medirá la adopción (usuarios activos, consultas, consumidores por sistema)."
+
+- id: GOV-DPD-015
+  title: Responsable por fase del ciclo de datos
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: {ideacion: LOW, salida: LOW}
+  source: {doc: 01-data-principles.md, section: "§2", quote: "generación → ingestión → transformación → serving → consumo → obsolecencia. Cada fase debe tener un responsable explícito."}
+  kb: [KB_04, KB_19]
+  check: {kind: field, target: data_product, path: spec.lifecycle.phase_owners, assert: {keys: [generacion, ingestion, transformacion, serving, consumo, obsolescencia]}}
+  remediation: "Mapear cada fase (generacion…obsolescencia) a un equipo o rol responsable."
+
+- id: GOV-DPD-016
+  title: Retención y eliminación definidas
+  nature: D
+  category: data_product
+  pillar: security_privacy
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: *gate_blocker
+  source: {doc: 10-data-security-framework.md, section: "§24", quote: "Todo Data Product debe tener una política explícita de retención o referencia a la política corporativa aplicable."}
+  kb: [KB_10, KB_19]
+  check: {kind: field, target: data_product, paths: [spec.retention.policy, spec.retention.deletion], assert: {not_placeholder: true}}
+  remediation: "Declarar spec.retention.policy (o referencia corporativa) y el criterio de eliminación."
+
+- id: GOV-DPD-017
+  title: Nivel objetivo de madurez
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  stages: {ideacion: LOW}
+  source: {doc: 06-data-product-definition.md, section: "§25 (Bloque 19)", quote: "Niveles sugeridos: MVP, Industrializado, Estratégico"}
+  kb: [KB_04, KB_20]
+  check: {kind: field, target: data_product, path: spec.lifecycle.target_level, assert: {enum: [mvp, industrializado, estrategico]}}
+  remediation: "Declarar spec.lifecycle.target_level."
+
+- id: GOV-DPD-018
+  title: Inputs documentados (Bloque 6)
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: {ideacion: LOW, diseno: HIGH, salida: LOW}
+  source: {doc: 06-data-product-definition.md, section: "§12 (Bloque 6)", quote: "Input | Sistema origen | Dominio fuente | Tipo | Frecuencia | Owner de origen | Criticidad"}
+  kb: [KB_04]
+  check:
+    kind: each
+    target: data_product
+    path: spec.inputs
+    noun: input
+    keys:
+      source_system: {not_placeholder: true}
+      source_domain: {not_placeholder: true}
+      type: {enum: [batch, streaming, cdc, api, archivo, evento, data_product]}
+      frequency: {not_placeholder: true}
+      owner: {not_placeholder: true}
+      critical: {type: boolean}
+  remediation: "Completar cada input con sistema origen, dominio fuente, tipo, frecuencia, owner y criticidad."
+
+- id: GOV-DPD-019
+  title: Outputs y modo de consumo (Bloque 7)
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: {ideacion: LOW, diseno: HIGH, salida: LOW}
+  source: {doc: 06-data-product-definition.md, section: "§13 (Bloque 7)", quote: "Este bloque obliga a pensar el producto desde el consumo y no desde el almacenamiento."}
+  kb: [KB_04, KB_13]
+  check:
+    kind: each
+    target: data_product
+    path: spec.outputs
+    noun: output
+    keys:
+      type: {enum: [dataset, api, evento, feed_saas, semantic_dataset, feature_set, dashboard_enabling_dataset, modelo_score, documento_rag]}
+      consumer: {not_placeholder: true}
+      channel: {not_placeholder: true}
+      frequency: {not_placeholder: true}
+      sla: {not_placeholder: true}
+  remediation: "Completar cada output con tipo, consumidor, canal, frecuencia y SLA."
+
+- id: GOV-DPD-020
+  title: Relación con ARTS declarada
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  stages: *from_design
+  source: {doc: 06-data-product-definition.md, section: "§14 (Bloque 8)", quote: "Alineación con el estándar · Extensión por dominio · Modelo propio"}
+  kb: [KB_07]
+  check: {kind: field, target: data_product, path: spec.modeling.arts_alignment, assert: {enum: [alineado, extension, modelo_propio]}}
+  remediation: "Declarar cómo se usa ARTS: alineado | extension | modelo_propio (y justificar en ADR si es propio)."
+
+- id: GOV-DPD-021
+  title: Capas del lakehouse declaradas
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: *from_design
+  source: {doc: 06-data-product-definition.md, section: "§14 Layer esperada"}
+  kb: [KB_06]
+  check: {kind: field, target: data_product, path: spec.modeling.layers, assert: {min_items: 1, enum: [bronze, silver, gold, semantic, serving, feature]}}
+  remediation: "Declarar spec.modeling.layers (bronze, silver, gold, semantic, serving, feature)."
+
+- id: GOV-DPD-022
+  title: Interfaz semántica obligatoria con consumo analítico (Bloque 15)
+  nature: D
+  category: data_product
+  pillar: semantic_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: *from_design
+  when: [{dp: spec.type, in: [analytical, semantic_metrics]}]
+  source: {doc: 06-data-product-definition.md, section: "§21 (Bloque 15)", quote: "no basta con definir tablas; debe definirse su interfaz semántica esperada."}
+  kb: [KB_12]
+  check: {kind: field, target: data_product, path: spec.semantic.exposes_metrics, assert: {min_items: 1}}
+  remediation: "Declarar las métricas/dimensiones que expone o alimenta el producto (spec.semantic)."
+
+- id: GOV-DPD-023
+  title: Bloque AI/ML readiness en productos AI/ML (Bloque 16)
+  nature: D
+  category: data_product
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: *from_design
+  when: [{dp: spec.type, equals: ai_ml}]
+  source: {doc: 06-data-product-definition.md, section: "§22 (Bloque 16)"}
+  kb: [KB_15]
+  check: {kind: field, target: data_product, paths: [spec.ai.use_case, spec.ai.usage], assert: {not_placeholder: true}}
+  remediation: "Declarar spec.ai.use_case y spec.ai.usage (features, training, inference, rag, embeddings)."
+
+- id: GOV-DPD-024
+  title: Dependencias declaradas (Bloque 18)
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: LOW
+  technique: schema
+  enforcement: [pr]
+  stages: *from_design
+  source: {doc: 06-data-product-definition.md, section: "§24 (Bloque 18)"}
+  kb: [KB_04]
+  check: {kind: field, target: data_product, path: spec.dependencies, assert: {type: list, required: true}}
+  remediation: "Declarar spec.dependencies (lista vacía explícita si no hay)."
+
+- id: GOV-DPD-025
+  title: Monitoreo de costos con owner (FinOps)
+  nature: D
+  category: data_product
+  pillar: observability_operations
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: {ideacion: "OFF", diseno: LOW, desarrollo: MEDIUM, salida: LOW}
+  source: {doc: 01-data-principles.md, section: "§12", quote: "Todo Data Product debe tener monitoreo de costos activo con owner asignado."}
+  kb: [KB_04, KB_17]
+  check: {kind: field, target: data_product, fields: {spec.cost.monitoring: {is_true: true}, spec.cost.owner: {not_placeholder: true}}}
+  remediation: "Declarar spec.cost.monitoring: true, spec.cost.owner y spec.cost.cost_center."
+
+- id: GOV-DPD-026
+  title: Descripción funcional útil
+  nature: H
+  category: data_product
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr, catalog]
+  stages: {operacion: HIGH, gate: HIGH}
+  source: {doc: 09-metadata-governance.md, section: "§22", quote: "descripciones vacías ... descripciones incompletas y sin contexto"}
+  kb: [KB_09, KB_04]
+  check: {kind: field, target: data_product, path: metadata.description, assert: {not_placeholder: true, min_length: 60}}
+  semantic_question: "¿La descripción permite a un consumidor entender en menos de un minuto qué es, qué decisión habilita y qué NO incluye el Data Product?"
+  remediation: "Describir qué es, para qué sirve, granularidad, alcance y exclusiones (≥60 caracteres, sin texto de relleno)."
+
+- id: GOV-DPD-027
+  title: Definition of Ready (entrada a desarrollo)
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: BLOCKER
+  technique: graph
+  enforcement: [gate]
+  summary: true
+  stages: {ideacion: "OFF", diseno: MEDIUM, salida: "OFF"}
+  source: {doc: 06-data-product-definition.md, section: "§26 Definition of Ready"}
+  kb: [KB_04, KB_19]
+  check:
+    kind: composite
+    requires:
+      capacidad_y_dominio: [GOV-BIZ-001, GOV-MET-003]
+      caso_de_uso: [GOV-BIZ-002]
+      owner_funcional: [GOV-DPD-007]
+      inputs_outputs: [GOV-DPD-018, GOV-DPD-019]
+      hipotesis_de_valor: [GOV-BIZ-003]
+      contrato_base: [GOV-CTR-001]
+      arquitectura_definida: [GOV-ARC-014]
+      dependencias: [GOV-DPD-024]
+  remediation: "Resolver los criterios listados antes de iniciar el desarrollo (06 §26)."
+
+- id: GOV-DPD-028
+  title: Definition of Done (listo para producción)
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: BLOCKER
+  technique: graph
+  enforcement: [gate]
+  summary: true
+  stages: {ideacion: "OFF", diseno: "OFF", desarrollo: LOW, salida: "OFF"}
+  source: {doc: 06-data-product-definition.md, section: "§26 Definition of Done"}
+  kb: [KB_04, KB_19, KB_20]
+  check:
+    kind: composite
+    requires:
+      ownership: [GOV-DPD-007, GOV-DPD-008]
+      dominio_y_alcance: [GOV-MET-003, GOV-MET-005]
+      contrato: [GOV-CTR-001, GOV-CTR-003, GOV-CTR-005]
+      metadata: [GOV-MET-015]
+      linaje: [GOV-MET-009]
+      calidad: [GOV-QLT-001, GOV-QLT-006, GOV-QLT-007]
+      acceso_y_seguridad: [GOV-SEC-001, GOV-SEC-004, GOV-SEC-005]
+      monitoreo_y_observabilidad: [GOV-OBS-001, GOV-OBS-002]
+      semantica_y_consumo: [GOV-DPD-022, GOV-DPD-019]
+      sla_slo: [GOV-DPD-013]
+      retencion_y_lifecycle: [GOV-DPD-016, GOV-LCY-001]
+      dataops: [GOV-STR-004, GOV-OPS-001, GOV-OPS-006]
+      modularizacion: [GOV-STR-001, GOV-NAM-001]
+  remediation: "El producto no alcanza su Definition of Done: cerrar los bloques incumplidos antes de promover."
+
+# =====================================================================================================
+# CTR · DATA CONTRACTS  (01 §6; 06 §11; 15-dataops-cicd §17, §20; Estructura de Repositorio contracts/)
+# =====================================================================================================
+- id: GOV-CTR-001
+  title: Contrato de salida definido
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: BLOCKER
+  technique: path
+  enforcement: [pr, gate]
+  scope: repo
+  stages: *build_up
+  source: {doc: 01-data-principles.md, section: "§6", quote: "No se permiten integraciones sin contrato definido."}
+  kb: [KB_05]
+  check: {kind: exists, any: ["contracts/output/**/*.yaml", "contracts/output/**/*.yml"], message: "No hay contratos de salida en contracts/output/"}
+  remediation: "Definir contracts/output/<nombre>.yaml: schema, granularidad, claves, SLA, compatibilidad y política de cambios."
+
+- id: GOV-CTR-002
+  title: Contrato de entrada por cada input
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, gate]
+  stages: {ideacion: "OFF", diseno: LOW, desarrollo: MEDIUM, salida: "OFF"}
+  source: {doc: lineamientos/estructura-repositorio.md, section: "contracts/input", quote: "Contratos con sistemas fuente (qué espera recibir el producto)"}
+  kb: [KB_05]
+  check: {kind: plugin, name: contracts.input_coverage}
+  remediation: "Crear contracts/input/<input>.yaml o referenciarlo en spec.inputs[].contract."
+
+- id: GOV-CTR-003
+  title: Contrato conforme al esquema (campos mínimos)
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pre-commit, pr]
+  requires: {artifact: contracts_interface}
+  stages: *draft_ok
+  source: {doc: 15-dataops-cicd.md, section: "§17", quote: "nombre, versión, dominio, Data Product, descripción, owners, esquema, semántica mínima, SLA, reglas críticas de calidad, clasificación y compatibilidad"}
+  kb: [KB_05]
+  check: {kind: plugin, name: contracts.schema_valid}
+  remediation: "Ajustar el contrato a schemas/contract.schema.json."
+
+- id: GOV-CTR-004
+  title: Versión semántica del contrato
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: regex
+  enforcement: [pre-commit, pr]
+  stages: *draft_ok
+  source: {doc: 15-dataops-cicd.md, section: "§20", quote: "MAJOR: cambio rompiente, MINOR: nueva capacidad compatible, PATCH: corrección compatible."}
+  kb: [KB_05]
+  check: {kind: field, target: contracts_interface, path: metadata.version, assert: {semver: true}}
+  remediation: "Declarar metadata.version MAJOR.MINOR.PATCH."
+
+- id: GOV-CTR-005
+  title: Compatibilidad y política de cambios declaradas
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: *draft_ok
+  source: {doc: 06-data-product-definition.md, section: "§11 Campos recomendados", quote: "Compatibilidad backward / forward · Política de breaking changes · Política de notificación de cambios"}
+  kb: [KB_05]
+  check:
+    kind: field
+    target: contracts_interface
+    fields:
+      spec.compatibility: {enum: [backward, forward, full, none]}
+      spec.change_policy.breaking_changes: {not_placeholder: true}
+      spec.change_policy.notification_channel: {not_placeholder: true}
+  remediation: "Declarar spec.compatibility y spec.change_policy (breaking_changes, notice_days, notification_channel)."
+
+- id: GOV-CTR-006
+  title: Granularidad y claves de negocio del contrato de salida
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: *draft_ok
+  source: {doc: 06-data-product-definition.md, section: "§11, §14", quote: "estructura del output, granularidad, campos críticos ... Clave(s) de negocio"}
+  kb: [KB_05, KB_07]
+  check: {kind: field, target: contracts_output, fields: {spec.granularity: {not_placeholder: true}, spec.business_keys: {min_items: 1}}}
+  remediation: "Declarar spec.granularity (ej. 'línea de ticket por día') y spec.business_keys."
+
+- id: GOV-CTR-007
+  title: Breaking change sin versión MAJOR
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: BLOCKER
+  technique: diff
+  enforcement: [pr]
+  requires: {artifact: contracts_interface}
+  source: {doc: 15-dataops-cicd.md, section: "§20", quote: "Los breaking changes deben ser explícitos, justificados y comunicados."}
+  kb: [KB_05]
+  check: {kind: plugin, name: contracts.breaking_change}
+  remediation: "Subir MAJOR (commit `feat(scope)!:`), documentar migración en CHANGELOG y notificar a consumidores según change_policy."
+
+- id: GOV-CTR-008
+  title: Cambio de contrato registrado en CHANGELOG
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: MEDIUM
+  technique: diff
+  enforcement: [pr]
+  scope: repo
+  source: {doc: 15-dataops-cicd.md, section: "§16", quote: "si afecta contratos, si requiere actualización de metadata ... si es breaking change"}
+  kb: [KB_05, KB_18]
+  check: {kind: plugin, name: contracts.changelog_on_change}
+  remediation: "Agregar la entrada correspondiente en CHANGELOG.md."
+
+- id: GOV-CTR-009
+  title: Contrato referencia al Data Product del repositorio
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr]
+  requires: {artifact: contracts_interface}
+  source: {doc: 15-dataops-cicd.md, section: "§17"}
+  kb: [KB_05]
+  check: {kind: plugin, name: contracts.dp_ref}
+  remediation: "metadata.data_product debe ser el metadata.id de la ficha del repo."
+
+- id: GOV-CTR-010
+  title: Cada modelo Gold tiene contrato
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, gate]
+  stages: *from_build
+  requires: {glob: ["modeling/dbt/models/gold/**/*.sql"]}
+  source: {doc: lineamientos/estructura-repositorio.md, section: "contracts/", quote: "Cada tabla o entidad principal del producto debe tener su contrato definido."}
+  kb: [KB_05, KB_07]
+  check: {kind: plugin, name: contracts.gold_model_coverage}
+  remediation: "Crear contracts/gold/{dim|fact}/<modelo>.yaml para cada modelo Gold."
+
+- id: GOV-CTR-011
+  title: Tests de contrato implementados
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr, gate]
+  scope: repo
+  stages: *ops_high
+  when: [{exists: "contracts/output/**/*.yaml"}]
+  source: {doc: lineamientos/estructura-repositorio.md, section: "tests/contract", quote: "Que los schemas producidos cumplen el contrato definido"}
+  kb: [KB_05, KB_18]
+  check: {kind: exists, any: ["tests/contract/**/*.py", "tests/contract/**/*.sql", "tests/contract/**/*.yml", "tests/contract/**/*.yaml"],
+          message: "Hay contratos pero tests/contract/ está vacío"}
+  remediation: "Agregar tests de conformidad schema-vs-contrato en tests/contract/ (se ejecutan en PR y pre-deploy)."
+
+- id: GOV-CTR-012
+  title: SLA del contrato coherente con el del Data Product
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: LOW
+  technique: graph
+  enforcement: [pr]
+  requires: {artifact: contracts_output}
+  source: {doc: 06-data-product-definition.md, section: "§11, §23"}
+  kb: [KB_05]
+  check: {kind: plugin, name: contracts.sla_consistency}
+  remediation: "Alinear la freshness del contrato con la del Data Product (no prometer menos de lo operado)."
+
+- id: GOV-CTR-013
+  title: Campos del contrato descritos
+  nature: H
+  category: contratos
+  pillar: data_contract
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  stages: *draft_ok
+  source: {doc: 06-data-product-definition.md, section: "§11", quote: "campos críticos, reglas de obligatoriedad, formatos"}
+  kb: [KB_05, KB_09]
+  check: {kind: each, target: contracts_interface, path: spec.schema, noun: campo, keys: {description: {not_placeholder: true, min_length: 10}}}
+  semantic_question: "¿Las descripciones de los campos son inequívocas (unidad, moneda, zona horaria, reglas de cálculo) y consistentes con el glosario?"
+  remediation: "Describir cada campo (≥10 caracteres): significado, unidad y reglas relevantes."
+
+- id: GOV-CTR-014
+  title: Cambio semántico no declarado
+  nature: S
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 15-dataops-cicd.md, section: "§17, §20"}
+  kb: [KB_05]
+  semantic_question: "¿Algún campo cambió de significado (regla de cálculo, unidad, universo) manteniendo nombre y tipo? Eso es breaking aunque el schema no cambie."
+  remediation: "Tratar el cambio semántico como MAJOR o crear un nuevo campo."
+
+- id: GOV-CTR-015
+  title: Dependencias entre productos por contrato versionado
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr]
+  source: {doc: 15-dataops-cicd.md, section: "§17", quote: "Las relaciones entre productos de datos no deben basarse en conocimiento implícito de tablas o lógica interna"}
+  kb: [KB_05]
+  check: {kind: plugin, name: product.dp_input_refs}
+  remediation: "Declarar data_product_ref y contract_version en cada input de tipo data_product."
+
+# =====================================================================================================
+# MET · METADATA & CATÁLOGO  (01 §3; 09-metadata-governance; 15-dataops-cicd §18)
+# =====================================================================================================
+- id: GOV-MET-001
+  title: Glosario del producto con términos gobernados
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr, catalog]
+  when: [{exists: "metadata/catalog/glossary.yaml"}]
+  source: {doc: 09-metadata-governance.md, section: "§12", quote: "término, definición, contexto, owner del término, términos relacionados, métricas asociadas, dominio"}
+  kb: [KB_09]
+  check:
+    kind: each
+    target: glossary
+    path: terms
+    noun: término
+    label_key: term
+    keys:
+      definition: {not_placeholder: true, min_length: 20}
+      owner: {not_placeholder: true}
+      domain: {not_placeholder: true}
+  remediation: "Completar definición (≥20 caracteres), owner y dominio de cada término."
+
+- id: GOV-MET-002
+  title: Criticidad declarada
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, catalog]
+  stages: {ideacion: MEDIUM}
+  source: {doc: 09-metadata-governance.md, section: "§10", quote: "estado del producto de datos, y nivel de criticidad"}
+  kb: [KB_09]
+  check: {kind: field, target: data_product, path: spec.criticality, assert: {enum: [baja, media, alta, critica]}}
+  remediation: "Declarar spec.criticality ∈ {baja, media, alta, critica}."
+
+- id: GOV-MET-003
+  title: Dominio de datos declarado
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pr, catalog]
+  source: {doc: 01-data-principles.md, section: "§7", quote: "Todo dataset debe pertenecer a un dominio de datos declarado."}
+  kb: [KB_03]
+  check: {kind: field, target: data_product, path: spec.domain, assert: {not_placeholder: true}}
+  remediation: "Declarar spec.domain con un dominio canónico de negocio."
+
+- id: GOV-MET-004
+  title: Dominio registrado en el modelo de dominios
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, catalog]
+  source: {doc: 01-data-principles.md, section: "§7", quote: "Los límites de dominio de datos son definidos y mantenidos por el Data Council corporativo."}
+  kb: [KB_03]
+  check: {kind: plugin, name: metadata.domain_registered}
+  remediation: "Usar un dominio del registro (rules/registry/domains.yaml) o gestionar su alta con el Data Council."
+
+- id: GOV-MET-005
+  title: Subdominio declarado y registrado
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr, catalog]
+  source: {doc: 02.1-business-capability-alignment.md, section: "§10"}
+  kb: [KB_03, KB_01]
+  check: {kind: plugin, name: metadata.subdomain_registered}
+  remediation: "Declarar un subdominio registrado para el dominio (o proponer su alta)."
+
+- id: GOV-MET-006
+  title: Términos de glosario asociados
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: count
+  enforcement: [pr, catalog]
+  stages: {ideacion: "OFF", diseno: LOW, gate: HIGH, operacion: HIGH, salida: LOW}
+  source: {doc: 09-metadata-governance.md, section: "§10", quote: "términos de glosario asociados"}
+  kb: [KB_09]
+  check: {kind: field, target: data_product, path: spec.glossary_terms, assert: {min_items: 1}}
+  remediation: "Asociar los términos de negocio del producto (spec.glossary_terms)."
+
+- id: GOV-MET-007
+  title: Términos de glosario resolubles
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr, catalog]
+  source: {doc: 09-metadata-governance.md, section: "§12", quote: "Un término crítico de negocio no debe tener múltiples definiciones no gobernadas."}
+  kb: [KB_09]
+  check: {kind: plugin, name: metadata.glossary_resolved}
+  remediation: "Definir el término en metadata/catalog/glossary.yaml o usar el término corporativo existente."
+
+- id: GOV-MET-008
+  title: Tags de taxonomía controlada
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr, catalog]
+  source: {doc: 09-metadata-governance.md, section: "§13", quote: "La taxonomía debe ser consistente y gobernada; no conviene permitir proliferación caótica de tags."}
+  kb: [KB_09]
+  check: {kind: plugin, name: metadata.tags_controlled}
+  remediation: "Usar tags del registro (rules/registry/tags.yaml) o proponer su alta a Gobierno de Datos."
+
+- id: GOV-MET-009
+  title: Linaje esperado de fuente a consumo
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, catalog]
+  stages: {ideacion: "OFF", diseno: MEDIUM, desarrollo: MEDIUM, salida: LOW}
+  source: {doc: 06-data-product-definition.md, section: "§18 (Bloque 12)", quote: "Fuente → ingestión → Bronze → Silver → Gold / Semantic / Serving → consumo"}
+  kb: [KB_09, KB_06]
+  check: {kind: plugin, name: metadata.lineage_expected}
+  remediation: "Declarar spec.lineage.expected en orden (fuente, ingestión, capas, consumidor)."
+
+- id: GOV-MET-010
+  title: Emails corporativos en ownership
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: HIGH
+  technique: regex
+  enforcement: [pr, catalog]
+  source: {doc: 09-metadata-governance.md, section: "§22", quote: "owner de negocio vigente"}
+  kb: [KB_03, KB_09]
+  check: {kind: plugin, name: metadata.owner_emails}
+  remediation: "Usar emails corporativos nominales (dominios permitidos en .govkit.yaml → policies.allowed_email_domains)."
+
+- id: GOV-MET-011
+  title: Mapeo OpenMetadata-ready
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr, catalog]
+  stages: {ideacion: "OFF", diseno: LOW, gate: HIGH, operacion: HIGH, salida: MEDIUM}
+  source: {doc: 06-data-product-definition.md, section: "§17 OpenMetadata readiness", quote: "nombre de la entidad a catalogar, owner, descripción, tags, dominio, relación con datasets físicos y lógicos"}
+  kb: [KB_09, KB_21]
+  check:
+    kind: field
+    target: openmetadata
+    fields:
+      entity.name: {not_placeholder: true}
+      entity.owner: {not_placeholder: true}
+      entity.domain: {not_placeholder: true}
+      entity.description: {not_placeholder: true}
+      entity.tags: {min_items: 1}
+      entity.assets: {min_items: 1}
+  remediation: "Completar metadata/catalog/openmetadata.yaml (entity: name, owner, domain, description, tags, assets)."
+
+- id: GOV-MET-012
+  title: Archivo de mapeo OpenMetadata presente
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr, catalog]
+  scope: repo
+  stages: {ideacion: "OFF", diseno: LOW, gate: HIGH, operacion: HIGH}
+  source: {doc: 15-dataops-cicd.md, section: "§18", quote: "La metadata de un Data Product no debe vivir solo en una herramienta externa sin vínculo controlado con el repo"}
+  kb: [KB_09]
+  check: {kind: exists, any: [metadata/catalog/openmetadata.yaml, metadata/openmetadata.yaml]}
+  remediation: "Crear metadata/catalog/openmetadata.yaml para la sincronización controlada con el catálogo."
+
+- id: GOV-MET-013
+  title: Metadata revisada periódicamente
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: LOW
+  technique: threshold
+  enforcement: [periodic]
+  stages: *run_only
+  source: {doc: 09-metadata-governance.md, section: "§24", quote: "La metadata no puede ser de carga única."}
+  kb: [KB_09]
+  check: {kind: plugin, name: metadata.staleness}
+  remediation: "Revisar la ficha y actualizar metadata.updated (cadencia mensual/trimestral por dominio)."
+
+- id: GOV-MET-014
+  title: Fechas de la ficha coherentes
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: LOW
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 06-data-product-definition.md, section: "§7", quote: "Fecha de creación · Fecha de última actualización"}
+  kb: [KB_04]
+  check: {kind: plugin, name: metadata.dates}
+  remediation: "Usar fechas ISO; updated ≥ created y no futura."
+
+- id: GOV-MET-015
+  title: Data Product catalogable (metadata mínima 09 §10)
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: HIGH
+  technique: graph
+  enforcement: [gate, catalog]
+  summary: true
+  stages: {ideacion: "OFF", diseno: MEDIUM, gate: BLOCKER, operacion: BLOCKER, salida: MEDIUM}
+  source: {doc: 09-metadata-governance.md, section: "§10", quote: "Este conjunto mínimo es la base para considerarlo catalogable y gobernable."}
+  kb: [KB_09]
+  check:
+    kind: composite
+    requires:
+      descripcion: [GOV-DPD-026]
+      capacidad: [GOV-BIZ-001]
+      dominio_subdominio: [GOV-MET-003, GOV-MET-005]
+      owner_y_steward: [GOV-DPD-007, GOV-DPD-008]
+      consumidores: [GOV-DPD-011]
+      caso_de_uso: [GOV-BIZ-002]
+      clasificacion: [GOV-SEC-001]
+      datasets: [GOV-DPD-019]
+      glosario: [GOV-MET-006, GOV-MET-007]
+      linaje: [GOV-MET-009]
+      sla_freshness: [GOV-DPD-013]
+      estado: [GOV-LCY-001]
+      criticidad: [GOV-MET-002]
+  remediation: "Completar la metadata mínima antes de publicar en el catálogo."
+
+- id: GOV-MET-016
+  title: Descripción útil de contratos
+  nature: H
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr, catalog]
+  stages: *draft_ok
+  source: {doc: 09-metadata-governance.md, section: "§22"}
+  kb: [KB_09, KB_05]
+  check: {kind: field, target: contracts_interface, path: metadata.description, assert: {not_placeholder: true, min_length: 40}}
+  semantic_question: "¿La descripción del contrato explica qué promete el productor, a quién y con qué granularidad?"
+  remediation: "Describir el contrato (≥40 caracteres)."
+
+- id: GOV-MET-017
+  title: Consistencia entre metadata técnica y de negocio
+  nature: S
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 09-metadata-governance.md, section: "§27", quote: "separar metadata técnica de metadata de negocio al punto de volverlas irreconciliables"}
+  kb: [KB_09]
+  semantic_question: "¿La descripción de negocio, el glosario y los contratos describen el mismo objeto (granularidad, universo, exclusiones)?"
+  remediation: "Reconciliar descripción, glosario y contratos."
+
+- id: GOV-MET-018
+  title: Proceso de mantenimiento de metadata por dominio
+  nature: O
+  category: metadata
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: human
+  enforcement: [periodic]
+  source: {doc: 09-metadata-governance.md, section: "§24", quote: "revisión mensual / trimestral por dominio de datos"}
+  kb: [KB_09]
+  remediation: "Agendar revisión periódica por dominio con Data Steward y Gobierno de Datos."
+
+# =====================================================================================================
+# QLT · CALIDAD DE DATOS  (01 §4; 08-data-quality-framework)
+# =====================================================================================================
+- id: GOV-QLT-001
+  title: Reglas de calidad definidas
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: BLOCKER
+  technique: path
+  enforcement: [pr, gate]
+  scope: repo
+  stages: *build_up
+  source: {doc: 08-data-quality-framework.md, section: "§12", quote: "Si un Data Product no tiene reglas críticas definidas, no está listo para industrialización."}
+  kb: [KB_08]
+  check: {kind: exists, any: ["quality/expectations/*.yaml", "quality/expectations/*.yml", metadata/data_quality.yaml],
+          message: "No hay ficha de calidad en quality/expectations/"}
+  remediation: "Crear quality/expectations/<producto>.yaml con reglas, gates, SLA y operación de alertas."
+
+- id: GOV-QLT-002
+  title: Estructura mínima de cada regla de calidad
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: schema
+  enforcement: [pre-commit, pr]
+  stages: *draft_ok
+  source: {doc: 08-data-quality-framework.md, section: "§12 Estructura mínima", quote: "Nombre, Descripción, Dimensión, Capa, Dataset/entidad/campo, Umbral, Severidad, Acción esperada, Owner"}
+  kb: [KB_08]
+  check:
+    kind: each
+    target: quality_rules
+    path: spec.rules
+    noun: regla
+    keys:
+      description: {not_placeholder: true}
+      dimension: {not_placeholder: true}
+      layer: {not_placeholder: true}
+      object: {not_placeholder: true}
+      threshold: {required: true}
+      severity: {not_placeholder: true}
+      action: {not_placeholder: true}
+      owner: {not_placeholder: true}
+  remediation: "Completar los 9 atributos de cada regla (08 §12)."
+
+- id: GOV-QLT-003
+  title: Dimensión de calidad canónica
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: schema
+  enforcement: [pre-commit, pr]
+  stages: *draft_ok
+  source: {doc: 08-data-quality-framework.md, section: "§9", quote: "Completitud, Unicidad, Consistencia, Validez, Integridad referencial, Freshness, Exactitud, Trazabilidad"}
+  kb: [KB_08]
+  check: {kind: each, target: quality_rules, path: spec.rules, noun: regla,
+          keys: {dimension: {enum: [completitud, unicidad, consistencia, validez, integridad_referencial, freshness, exactitud, trazabilidad]}}}
+  remediation: "Usar una de las 8 dimensiones del framework (DAMA)."
+
+- id: GOV-QLT-004
+  title: Severidad y acción del catálogo de calidad
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: schema
+  enforcement: [pre-commit, pr]
+  stages: *draft_ok
+  source: {doc: 08-data-quality-framework.md, section: "§13", quote: "Crítica · Alta · Media · Baja ... bloquear pipeline, bloquear promoción a Gold, publicar con warning, alertar a owner, registrar incidente, abrir backlog"}
+  kb: [KB_08]
+  check:
+    kind: each
+    target: quality_rules
+    path: spec.rules
+    noun: regla
+    keys:
+      severity: {enum: [critica, alta, media, baja]}
+      action: {enum: [bloquear_pipeline, bloquear_promocion, publicar_con_warning, alertar_owner, registrar_incidente, abrir_backlog]}
+  remediation: "Usar severidades y acciones del catálogo 08 §13."
+
+- id: GOV-QLT-005
+  title: Capa de aplicación válida
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 08-data-quality-framework.md, section: "§10"}
+  kb: [KB_08, KB_06]
+  check: {kind: each, target: quality_rules, path: spec.rules, noun: regla, keys: {layer: {enum: [bronze, silver, gold, semantic, serving, feature]}}}
+  remediation: "Declarar la capa: bronze, silver, gold, semantic, serving o feature."
+
+- id: GOV-QLT-006
+  title: SLOs cuantificados en ≥3 dimensiones
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: count
+  enforcement: [pr, gate]
+  stages: *build_up
+  requires: {artifact: quality_rules}
+  source: {doc: 01-data-principles.md, section: "§4", quote: "Todo Data Product debe definir SLOs para al menos 3 dimensiones de calidad con umbrales cuantificables."}
+  kb: [KB_08]
+  check: {kind: plugin, name: quality.slo_dimensions}
+  remediation: "Cubrir al menos 3 dimensiones distintas con umbrales numéricos (%, conteo, duración u hora límite)."
+
+- id: GOV-QLT-007
+  title: Al menos una regla crítica
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: count
+  enforcement: [pr, gate]
+  stages: *build_up
+  source: {doc: 08-data-quality-framework.md, section: "§26 Reglas críticas", quote: "Todo Data Product debe tener al menos: reglas críticas identificadas, umbrales definidos, y criterio de aceptación mínima."}
+  kb: [KB_08]
+  check: {kind: count, target: quality_rules, path: spec.rules, where: [{item: severity, equals: critica}], min: 1,
+          message: "No hay reglas de severidad crítica"}
+  remediation: "Identificar las reglas cuyo incumplimiento invalida el producto (severidad crítica)."
+
+- id: GOV-QLT-008
+  title: Umbrales cuantificables
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pre-commit, pr]
+  requires: {artifact: quality_rules}
+  source: {doc: 08-data-quality-framework.md, section: "§27", quote: "usar umbrales implícitos o 'sentido común'"}
+  kb: [KB_08]
+  check: {kind: plugin, name: quality.threshold_quantifiable}
+  remediation: "Expresar el umbral como porcentaje, número, duración ISO-8601 (PT15M) u hora límite (07:00)."
+
+- id: GOV-QLT-009
+  title: Coherencia severidad ↔ acción
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  requires: {artifact: quality_rules}
+  source: {doc: 08-data-quality-framework.md, section: "§13", quote: "Crítica: El incumplimiento invalida el producto de datos para consumo o promoción"}
+  kb: [KB_08]
+  check: {kind: plugin, name: quality.severity_action}
+  remediation: "Reglas críticas → bloquear_pipeline / bloquear_promocion; reglas bajas no bloquean."
+
+- id: GOV-QLT-010
+  title: Quality gates Silver, Gold y Serving
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: {ideacion: "OFF", diseno: LOW, salida: "OFF"}
+  requires: {artifact: quality_rules}
+  source: {doc: 08-data-quality-framework.md, section: "§14", quote: "Los quality gates son obligatorios para todo productos de datos de negocio, como Pricing, Supply, Finance, Customer, y ... AI o decisiones ejecutivas."}
+  kb: [KB_08]
+  check: {kind: plugin, name: quality.gates}
+  remediation: "Declarar spec.gates.{silver,gold,serving} con criterio de aprobación (bloqueante o no)."
+
+- id: GOV-QLT-011
+  title: Operación de alertas de calidad
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: {ideacion: "OFF", diseno: LOW, desarrollo: MEDIUM, salida: "OFF"}
+  source: {doc: 08-data-quality-framework.md, section: "§26 Operación", quote: "Responsable de alertas · Canal de notificación · Acción ante incumplimiento crítico"}
+  kb: [KB_08, KB_17]
+  check:
+    kind: field
+    target: quality_rules
+    fields:
+      spec.alerting.owner: {not_placeholder: true}
+      spec.alerting.channel: {not_placeholder: true}
+      spec.alerting.critical_action: {not_placeholder: true}
+  remediation: "Declarar spec.alerting.owner, channel y critical_action."
+
+- id: GOV-QLT-012
+  title: Objeto de la regla resoluble contra contratos
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr]
+  requires: {artifact: quality_rules}
+  source: {doc: 08-data-quality-framework.md, section: "§12", quote: "Dataset / entidad / campo"}
+  kb: [KB_08, KB_05]
+  check: {kind: plugin, name: quality.object_resolves}
+  remediation: "Referenciar entidad.campo existentes en los contratos (o actualizar el contrato)."
+
+- id: GOV-QLT-013
+  title: Reglas derivadas a tests ejecutables
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr, gate]
+  scope: repo
+  stages: *ops_high
+  requires: {artifact: quality_rules}
+  source: {doc: 08-data-quality-framework.md, section: "§26", quote: "Esta ficha de Data Quality de Producto de Datos luego debe derivarse a reglas ejecutables."}
+  kb: [KB_08, KB_18]
+  check: {kind: plugin, name: quality.executable_tests}
+  remediation: "Implementar las reglas como dbt tests, Great Expectations o tests en tests/data_quality/."
+
+- id: GOV-QLT-014
+  title: Reglas de negocio fuera de Bronze
+  nature: H
+  category: calidad
+  pillar: data_quality
+  severity: LOW
+  technique: schema
+  enforcement: [pr]
+  requires: {artifact: quality_rules}
+  source: {doc: 08-data-quality-framework.md, section: "§10.1", quote: "No se espera aquí la validación completa del negocio."}
+  kb: [KB_08, KB_06]
+  check: {kind: plugin, name: quality.layer_fit}
+  semantic_question: "¿Las reglas definidas en Bronze se limitan a esquema, recepción, volumen y parsing?"
+  remediation: "Mover validaciones de negocio a Silver/Gold."
+
+- id: GOV-QLT-015
+  title: Umbrales adecuados al uso del producto
+  nature: S
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 08-data-quality-framework.md, section: "§6", quote: "la calidad no se evalúa en abstracto. Se evalúa en función del uso solicitado."}
+  kb: [KB_08]
+  semantic_question: "¿Los umbrales y severidades son coherentes con el consumo declarado (ejecutivo, operacional, AI) y la criticidad?"
+  remediation: "Recalibrar umbrales con Business Owner y Data Steward."
+
+- id: GOV-QLT-016
+  title: Gestión de incidentes de calidad
+  nature: O
+  category: calidad
+  pillar: data_quality
+  severity: MEDIUM
+  technique: human
+  enforcement: [runtime]
+  source: {doc: 08-data-quality-framework.md, section: "§22", quote: "detección, clasificación, evaluación de impacto, contención, remediación, comunicación, causa raíz, mejora preventiva"}
+  kb: [KB_08, KB_17]
+  remediation: "Operar el flujo de incidentes y registrar causa raíz y cierre."
+
+- id: GOV-QLT-017
+  title: Controles de calidad para features AI
+  nature: H
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: *from_build
+  when: [{dp: spec.type, equals: ai_ml}]
+  source: {doc: 08-data-quality-framework.md, section: "§10.5, §19", quote: "consistencia batch / online, ausencia de leakage, completitud de features críticas"}
+  kb: [KB_08, KB_15]
+  check: {kind: plugin, name: quality.ai_controls}
+  semantic_question: "¿Las ventanas temporales de las features evitan leakage respecto del target?"
+  remediation: "Agregar reglas de completitud en capa feature y controles de leakage."
+
+# =====================================================================================================
+# SEC · SEGURIDAD, PRIVACIDAD Y COMPLIANCE  (01 §13-§14; 10-data-security-framework)
+# =====================================================================================================
+- id: GOV-SEC-001
+  title: Clasificación de seguridad explícita
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pre-commit, pr, gate, catalog]
+  stages: {ideacion: HIGH}
+  source: {doc: 10-data-security-framework.md, section: "§10", quote: "No puede existir Data Product sin clasificación explícita."}
+  kb: [KB_10]
+  check: {kind: field, target: data_product, path: spec.classification.level, assert: {enum: [publico, interno, confidencial, sensible_pii]}}
+  remediation: "Declarar spec.classification.level ∈ {publico, interno, confidencial, sensible_pii} según la regulación del país."
+
+- id: GOV-SEC-002
+  title: Atributos de clasificación explícitos
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: {ideacion: MEDIUM}
+  source: {doc: 10-data-security-framework.md, section: "§10 Campos recomendados", quote: "presencia de PII sí/no, ... datos financieros ..., exposición a terceros ..., retención especial ..., política de masking sí/no"}
+  kb: [KB_10]
+  check:
+    kind: field
+    target: data_product
+    fields:
+      spec.classification.pii: {type: boolean}
+      spec.classification.financial: {type: boolean}
+      spec.classification.third_party_exposure: {type: boolean}
+      spec.classification.masking_required: {type: boolean}
+      spec.classification.special_retention: {type: boolean}
+  remediation: "Declarar explícitamente cada atributo como true/false."
+
+- id: GOV-SEC-003
+  title: PII ⇒ clasificación sensible y masking
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pre-commit, pr, gate]
+  source: {doc: 10-data-security-framework.md, section: "§11, §15", quote: "Si el uso no requiere el dato sensible en forma completa, debe evaluarse una forma de minimización o protección."}
+  kb: [KB_10]
+  check: {kind: plugin, name: security.pii_coherence}
+  remediation: "Con pii: true → level: sensible_pii y masking_required: true."
+
+- id: GOV-SEC-004
+  title: Privacy Impact Assessment completado antes de producción
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: schema
+  enforcement: [gate]
+  stages: *gate_blocker
+  source: {doc: 01-data-principles.md, section: "§13", quote: "Todo Data Product debe completar un Privacy Impact Assessment (PIA) antes de producción"}
+  kb: [KB_10]
+  check: {kind: field, target: data_product, fields: {spec.privacy.pia.status: {enum: [completado, no_aplica]}, spec.privacy.pia.reference: {not_placeholder: true}}}
+  remediation: "Completar el PIA y registrar estado y referencia en spec.privacy.pia."
+
+- id: GOV-SEC-005
+  title: Política de acceso declarada
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: *from_design
+  source: {doc: 10-data-security-framework.md, section: "§12", quote: "Ningún Data Product debe depender de accesos manuales informales o no auditables."}
+  kb: [KB_10]
+  check:
+    kind: field
+    target: data_product
+    fields:
+      spec.access.model: {enum: [rbac, abac]}
+      spec.access.level: {enum: [abierto_corporativo_controlado, restringido_dominio, restringido_rol, restringido_necesidad]}
+  remediation: "Declarar modelo (rbac/abac) y nivel de acceso."
+
+- id: GOV-SEC-006
+  title: Sin secretos ni credenciales hardcodeadas
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: ast
+  enforcement: [pre-commit, pr]
+  source: {doc: 10-data-security-framework.md, section: "§23", quote: "no hardcodear credenciales ... usar mecanismos seguros para secretos"}
+  kb: [KB_10, KB_18]
+  check: {kind: plugin, name: security.secrets_scan}
+  remediation: "Rotar la credencial expuesta, eliminarla del historial y leerla desde Secrets Manager."
+
+- id: GOV-SEC-007
+  title: Campos con apariencia de PII sin marcar
+  nature: H
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  requires: {artifact: contracts_all}
+  source: {doc: 10-data-security-framework.md, section: "§11", quote: "customer identity, contacto y atributos personales, loyalty accounts..."}
+  kb: [KB_10]
+  check: {kind: plugin, name: security.pii_column_names}
+  semantic_question: "Para cada campo señalado, ¿contiene realmente un dato personal identificable o identificador indirecto?"
+  remediation: "Marcar pii: true + técnica de masking, o documentar por qué no es PII."
+
+- id: GOV-SEC-008
+  title: Datos de muestra sin PII real
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: regex
+  enforcement: [pre-commit, pr]
+  source: {doc: 10-data-security-framework.md, section: "§11, §28", quote: "limitación de uso en ambientes no productivos ... no proteger datos sensibles en ambientes no productivos"}
+  kb: [KB_10]
+  check: {kind: plugin, name: security.pii_in_samples}
+  remediation: "Reemplazar por datos sintéticos o enmascarados; si fue publicado, tratar como incidente de seguridad."
+
+- id: GOV-SEC-009
+  title: Exposición a terceros gobernada
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, gate]
+  source: {doc: 10-data-security-framework.md, section: "§17", quote: "Ninguna integración externa relevante debe depender solo de confianza implícita"}
+  kb: [KB_10, KB_14]
+  check: {kind: plugin, name: security.third_party}
+  remediation: "Con exposición a terceros: contrato de salida + spec.access.third_party.{auth, recipients}."
+
+- id: GOV-SEC-010
+  title: RLS en consumo BI de datos sensibles
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, gate]
+  stages: *from_design
+  source: {doc: 10-data-security-framework.md, section: "§18", quote: "row-level security, column-level security, separación por negocio / país / unidad de negocio"}
+  kb: [KB_10, KB_12]
+  check: {kind: plugin, name: security.rls_required}
+  remediation: "Declarar spec.access.rls: true e implementar RLS en la serving/semantic layer."
+
+- id: GOV-SEC-011
+  title: Derecho al olvido en productos con PII
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr, gate]
+  stages: *from_design
+  when: [{dp: spec.classification.pii, equals: true}]
+  source: {doc: 10-data-security-framework.md, section: "§24", quote: "politicas de derecho al olvido a nivel de registros personales"}
+  kb: [KB_10]
+  check: {kind: field, target: data_product, path: spec.retention.right_to_be_forgotten, assert: {not_placeholder: true}}
+  remediation: "Documentar el procedimiento de supresión por titular (spec.retention.right_to_be_forgotten)."
+
+- id: GOV-SEC-012
+  title: Campos PII del contrato con técnica de protección
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: schema
+  enforcement: [pre-commit, pr]
+  requires: {artifact: contracts_all}
+  source: {doc: 10-data-security-framework.md, section: "§15", quote: "masking dinámico, masking estático, tokenización, hashing, seudonimización"}
+  kb: [KB_10, KB_05]
+  check: {kind: plugin, name: security.contract_pii_fields}
+  remediation: "Declarar masking ∈ {dynamic, static, tokenization, hashing, pseudonymization, encryption, redaction} y clasificación sensible_pii."
+
+- id: GOV-SEC-013
+  title: Vistas de consumo no exponen PII sin enmascarar
+  nature: H
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  requires: {glob: ["publishing/**/*.sql", "modeling/dbt/models/semantic/**/*.sql", "src/semantic/**/*.sql"]}
+  source: {doc: 10-data-security-framework.md, section: "§16.4, §18", quote: "protección frente a exposición indirecta de atributos"}
+  kb: [KB_10, KB_12]
+  check: {kind: plugin, name: security.views_expose_pii}
+  semantic_question: "¿La vista necesita el dato personal completo para su propósito, o puede minimizarse?"
+  remediation: "Aplicar función de masking/hash o excluir la columna de la vista publicada."
+
+- id: GOV-SEC-014
+  title: Validación automatizada de seguridad en CI/CD
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr, gate]
+  scope: repo
+  stages: {ideacion: "OFF", diseno: "OFF", gate: BLOCKER, operacion: BLOCKER, salida: "OFF"}
+  source: {doc: 10-data-security-framework.md, section: "§23", quote: "No debe desplegarse un Data Product a producción sin haber validado sus controles mínimos ... mediante una herramienta automatizada (ej. CI/CD)."}
+  kb: [KB_10, KB_18]
+  check: {kind: plugin, name: dataops.security_step}
+  remediation: "Agregar un paso de seguridad al pipeline (govkit lint --profile pr, escaneo de secretos, IaC scan)."
+
+- id: GOV-SEC-015
+  title: Proporcionalidad de controles a la sensibilidad
+  nature: S
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 10-data-security-framework.md, section: "§8, §28", quote: "diseñar seguridad tan rígida que inutilice el valor del Data Product"}
+  kb: [KB_10]
+  semantic_question: "¿Los controles declarados (acceso, masking, RLS, exposición) son proporcionales a la sensibilidad y criticidad, sin sobre- ni sub-protección?"
+  remediation: "Ajustar los controles con Security contact y Data Owner."
+
+- id: GOV-SEC-016
+  title: Exposición indirecta de PII vía joins o filtros
+  nature: S
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 10-data-security-framework.md, section: "§18", quote: "exposición de PII vía joins o dashboards"}
+  kb: [KB_10, KB_12]
+  semantic_question: "¿Algún modelo o vista permite reidentificar personas combinando atributos no PII (cuasi-identificadores) o filtros de baja cardinalidad?"
+  remediation: "Reducir granularidad, agregar k-anonimato o restringir dimensiones."
+
+- id: GOV-SEC-017
+  title: Certificación de uso responsable (self-service)
+  nature: O
+  category: seguridad
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: human
+  enforcement: [runtime]
+  source: {doc: 01-data-principles.md, section: "§14", quote: "Los usuarios deben completar una certificación de uso responsable de datos."}
+  kb: [KB_10]
+  remediation: "Controlar en plataforma que solo usuarios certificados accedan a autoservicio."
+
+- id: GOV-SEC-018
+  title: Revisión periódica de accesos
+  nature: O
+  category: seguridad
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: human
+  enforcement: [periodic]
+  source: {doc: 10-data-security-framework.md, section: "§12", quote: "revisión periódica, revocación oportuna"}
+  kb: [KB_10]
+  remediation: "Ejecutar recertificación de accesos por Owner de país."
+
+# =====================================================================================================
+# IAM · ROLES & POLICIES POR DATA PRODUCT  (lineamiento IAM - Roles & Policies)
+# =====================================================================================================
+- id: GOV-IAM-001
+  title: 1 rol + 2 policies (data + infra) por producto
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: HIGH
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  stages: *from_build
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Principio General", quote: "Cada producto de datos tiene 1 rol IAM y 2 policies IAM (data + infra)."}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.files_present}
+  remediation: "Versionar roles.json, policy-data.json y policy-infra.json del producto."
+
+- id: GOV-IAM-002
+  title: Tamaño de policy ≤ 6144 caracteres
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: threshold
+  enforcement: [pre-commit, pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "¿Por qué 2 policies?", quote: "AWS tiene un límite de 6144 caracteres por managed policy."}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.policy_size}
+  remediation: "Consolidar statements (Write+Delete sobre los mismos recursos exclusivos) o mover servicios de soporte a la policy infra."
+
+- id: GOV-IAM-003
+  title: Separación de lectura y escritura en statements
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: HIGH
+  technique: policy
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Regla 3", quote: "Las acciones de lectura y escritura deben ir en statements separados."}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.rw_separation}
+  remediation: "Dividir en `{Servicio}Read` (Get/List/Describe) y `{Servicio}Write` (Put/Create/Update/Delete)."
+
+- id: GOV-IAM-004
+  title: Wildcard de escritura solo sobre recursos exclusivos
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: policy
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Regla 2 (la más importante)", quote: "Una acción destructiva con wildcard en un recurso compartido puede afectar múltiples productos"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.write_wildcards}
+  remediation: "Usar recursos explícitos en buckets/databases compartidos; wildcard solo con prefijo exclusivo del producto."
+
+- id: GOV-IAM-005
+  title: KMS con key ID y cuenta explícitos
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: policy
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Regla 2 y 4", quote: "KMS Keys: Key ID explícito ... KMS keys siempre llevan account ID explícito"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.kms_explicit}
+  remediation: "Reemplazar por arn:aws:kms:us-east-1:<account>:key/<key-id>."
+
+- id: GOV-IAM-006
+  title: KMS condicionado por kms:ViaService
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: policy
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Regla 5", quote: "Esto limita el uso de KMS keys solo cuando se accede vía S3"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.kms_via_service}
+  remediation: "Agregar Condition StringEquals kms:ViaService = s3.us-east-1.amazonaws.com."
+
+- id: GOV-IAM-007
+  title: Región fija us-east-1 en ARNs de datos
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Regla 4", quote: "La region es fija: us-east-1"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.region_fixed}
+  remediation: "Fijar la región us-east-1 en ARNs de Glue, Athena y KMS."
+
+- id: GOV-IAM-008
+  title: Account ID comodín para multi-ambiente
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Regla 4", quote: "el account ID usa * para que la misma policy funcione en dev y prod sin modificación"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.account_wildcard}
+  remediation: "Usar `*` como account ID salvo en KMS y roles cross-account."
+
+- id: GOV-IAM-009
+  title: Sin acciones comodín globales
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: HIGH
+  technique: policy
+  enforcement: [pre-commit, pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Reglas de Seguridad", also: "10-data-security-framework.md §8 (least privilege)"}
+  kb: [KB_11, KB_10]
+  check: {kind: plugin, name: iam.action_wildcards}
+  remediation: "Enumerar las acciones necesarias (least privilege)."
+
+- id: GOV-IAM-010
+  title: Trust policy limitada a servicios autorizados
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: HIGH
+  technique: policy
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_role}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Estructura del Role", quote: "Define qué servicios AWS pueden asumirlo."}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.trust_principals}
+  remediation: "Limitar Principal.Service a glue/lakeformation (u otros autorizados en .govkit.yaml)."
+
+- id: GOV-IAM-011
+  title: Tags obligatorios del recurso IAM
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_role}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Tags obligatorios", quote: "Todos los tags listados son obligatorios para cualquier recurso IAM (roles y policies)"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.tags}
+  remediation: "Agregar los 19 tags (ceco, ambiente, pais, ..., pep, apl) con formato válido."
+
+- id: GOV-IAM-012
+  title: Alcance semántico de cada policy (data vs infra)
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: policy
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "¿Por qué 2 policies?", quote: "La división en 2 policies con criterio semántico claro"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.policy_scope}
+  remediation: "Policy data: S3/Glue/KMS/Athena/LakeFormation. Policy infra: Logs/EC2/Secrets/ECR/EMR/STS/IAM."
+
+- id: GOV-IAM-013
+  title: Sid descriptivo y único
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Statements esperados"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.sid}
+  remediation: "Usar Sid `{Servicio}{Propósito}` (S3DataLakeRead, GlueCatalogWrite...)."
+
+- id: GOV-IAM-014
+  title: Secrets y Logs acotados al producto
+  nature: D
+  category: iam
+  pillar: security_privacy
+  severity: HIGH
+  technique: policy
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Policy INFRA · Ejemplo", quote: "secret:{dp-secret-prefix}* · log-group:/aws/glue/{dp-name}-*"}
+  kb: [KB_11]
+  check: {kind: plugin, name: iam.scoped_support}
+  remediation: "Acotar a `secret:<prefijo-dp>*` y `log-group:/aws/glue/<dp>-*`."
+
+- id: GOV-IAM-015
+  title: Lectura cross-dominio respaldada por contrato
+  nature: H
+  category: iam
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: policy
+  enforcement: [pr]
+  stages: *iam_build
+  requires: {artifact: iam_policy_data}
+  source: {doc: lineamientos/iam-roles-policies.md, section: "Principio General", also: "01-data-principles.md §6"}
+  kb: [KB_11, KB_05]
+  check: {kind: plugin, name: iam.cross_domain_read}
+  semantic_question: "¿El acceso a buckets de otro dominio corresponde a un input declarado con contrato, o expone consumo por conocimiento implícito de tablas?"
+  remediation: "Consumir el otro dominio vía su Data Product/serving con contrato de entrada."
+
+# =====================================================================================================
+# OPS · DATAOPS & CI/CD  (15-dataops-cicd; Estructura de Repositorio)
+# =====================================================================================================
+- id: GOV-OPS-001
+  title: CODEOWNERS con Data Architects + Tech Leaders por carpeta
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  requires: {glob: ["CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS"]}
+  source: {doc: lineamientos/estructura-repositorio.md, section: "CODEOWNERS — Gobierno de Código", quote: "contracts/, modeling/, quality/ + tests/, pipelines/, src/, docs/, .github/ → Data Architects + Tech Leaders"}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.codeowners}
+  remediation: "Definir en CODEOWNERS cada carpeta crítica con ambos equipos (patrones configurables en .govkit.yaml)."
+
+- id: GOV-OPS-002
+  title: pr.yml se ejecuta en pull_request
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  scope: repo
+  requires: {glob: [".github/workflows/pr.yml", ".github/workflows/pr.yaml"]}
+  source: {doc: lineamientos/estructura-repositorio.md, section: ".github/workflows/", quote: "pr.yml · Pull Request a ramas protegidas · Ejecuta validaciones automáticas"}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.pr_trigger}
+  remediation: "Configurar `on: pull_request` en pr.yml."
+
+- id: GOV-OPS-003
+  title: Workflows reutilizan base-workflows
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  requires: {glob: [".github/workflows/*.yml", ".github/workflows/*.yaml"]}
+  source: {doc: lineamientos/estructura-repositorio.md, section: ".github/workflows/", quote: "Los workflows usan reusable workflows del repositorio central base-workflows"}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.reusable_workflows}
+  remediation: "Invocar `uses: <org>/base-workflows/.github/workflows/<wf>.yml@<version>`."
+
+- id: GOV-OPS-004
+  title: El PR valida lint, tests, contratos, metadata y seguridad
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  requires: {glob: [".github/workflows/pr.yml", ".github/workflows/pr.yaml"]}
+  source: {doc: 15-dataops-cicd.md, section: "§16", quote: "linting, unit tests, validación de contratos, validación de metadata, ... security scans"}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.pr_validations}
+  remediation: "Agregar `govkit lint` y los tests al workflow de PR (o usar base-workflows)."
+
+- id: GOV-OPS-005
+  title: Tests unitarios para el código del producto
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr]
+  scope: repo
+  stages: *from_build
+  requires: {glob: ["src/**/*.py", "shared/**/*.py"]}
+  source: {doc: 15-dataops-cicd.md, section: "§19", quote: "unit: lógica aislada"}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.unit_tests}
+  remediation: "Agregar tests en tests/unit/ para la lógica de transformación."
+
+- id: GOV-OPS-006
+  title: Smoke tests post-deploy
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: path
+  enforcement: [gate]
+  scope: repo
+  stages: *ops_high
+  source: {doc: 15-dataops-cicd.md, section: "§19, §26", quote: "smoke: validación mínima post-deploy"}
+  kb: [KB_18]
+  check: {kind: exists, any: ["tests/smoke/**/*.py", "tests/smoke/**/*.sql", "tests/smoke/**/*.yaml", "tests/smoke/**/*.sh"],
+          message: "Sin smoke tests en tests/smoke/"}
+  remediation: "Agregar smoke tests que ejecuten el pipeline con datos mínimos tras cada despliegue."
+
+- id: GOV-OPS-007
+  title: Silver→Gold solo en dbt
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: path
+  enforcement: [pr]
+  requires: {glob: ["modeling/dbt/models/gold/**/*.sql"]}
+  source: {doc: lineamientos/estructura-repositorio.md, section: "modeling/", quote: "No se permiten transformaciones ad-hoc fuera del proyecto dbt para estas capas."}
+  kb: [KB_18, KB_07]
+  check: {kind: plugin, name: dataops.dbt_only_transforms}
+  remediation: "Migrar la lógica a modelos dbt en modeling/dbt/models/gold/."
+
+- id: GOV-OPS-008
+  title: deploy.yml coherente con la política de ramas
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  scope: repo
+  requires: {glob: [".github/workflows/deploy.yml", ".github/workflows/deploy.yaml"]}
+  source: {doc: 15-dataops-cicd.md, section: "§15", also: "Estructura de Repositorio · Branches y Ambientes (ver hallazgo H-01)"}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.branch_strategy}
+  remediation: "Alinear los triggers de deploy.yml con policies.branching (trunk | env-branches) hasta que el ADR-006 se resuelva."
+
+- id: GOV-OPS-009
+  title: Waivers válidos y vigentes
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, periodic]
+  scope: repo
+  source: {doc: 15-dataops-cicd.md, section: "§8", quote: "Si un cambio afecta el comportamiento del Data Product y no está versionado, el cambio no está suficientemente gobernado."}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.waivers}
+  remediation: "Toda excepción requiere rule, reason, owner, adr (existente) y expires; renovar o cerrar las vencidas."
+
+- id: GOV-OPS-010
+  title: Template de PR con campos de gobierno
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  stages: {ideacion: LOW}
+  source: {doc: 15-dataops-cicd.md, section: "§16", quote: "resumen del cambio, tipo de cambio, impacto esperado, si afecta contratos, si requiere actualización de metadata, si cambia runbook, si es breaking change"}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.pr_template}
+  remediation: "Agregar .github/pull_request_template.md con las 7 secciones."
+
+- id: GOV-OPS-011
+  title: Orquestación versionada en Step Functions
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr, gate]
+  scope: repo
+  stages: *ops_high
+  when: [{exists: "src/**/*.py"}]
+  source: {doc: lineamientos/estructura-repositorio.md, section: "pipelines/", quote: "Cada pipeline debe tener su definición versionada en este directorio."}
+  kb: [KB_18]
+  check: {kind: exists, any: ["pipelines/orchestration/step_function/**/*.json"], message: "Sin definiciones ASL en pipelines/orchestration/step_function/"}
+  remediation: "Versionar la máquina de estados (ASL JSON) del producto."
+
+- id: GOV-OPS-012
+  title: Configuración de ambiente externalizada
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  requires: {glob: ["src/**/*.py", "shared/**/*.py"]}
+  source: {doc: 15-dataops-cicd.md, section: "§22", quote: "Permitir adaptación sin bifurcar el código y sin reintroducir drift no controlado."}
+  kb: [KB_18]
+  check: {kind: plugin, name: dataops.hardcoded_env}
+  remediation: "Mover account IDs, nombres dependientes de ambiente y buckets a config/ o parámetros del job."
+
+- id: GOV-OPS-013
+  title: Sin recursos productivos creados manualmente
+  nature: O
+  category: dataops
+  pillar: dataops_cicd
+  severity: HIGH
+  technique: human
+  enforcement: [runtime]
+  source: {doc: 15-dataops-cicd.md, section: "§21", quote: "No crear recursos manuales de producción como práctica normal de operación."}
+  kb: [KB_18]
+  remediation: "Detectar drift IaC vs cuenta (terraform plan periódico) y regularizar vía PR."
+
+# =====================================================================================================
+# ARC · ARQUITECTURA, CAPAS Y MODELADO  (01 §5, §7, §8, §10, §11; 02 §11-§13; 06 §14)
+# =====================================================================================================
+- id: GOV-ARC-001
+  title: Modelos de consumo no leen Bronze
+  nature: D
+  category: arquitectura
+  pillar: product_definition
+  severity: HIGH
+  technique: regex
+  enforcement: [pre-commit, pr]
+  requires: {glob: ["modeling/dbt/models/**/*.sql", "src/**/*.sql"]}
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§8.2", quote: "Queda estrictamente prohibido que un Data Product Analítico consuma directamente ... zonas Bronze técnicas"}
+  kb: [KB_06]
+  check: {kind: plugin, name: sql.no_bronze_in_gold}
+  remediation: "Consumir desde Silver (canónico) o Gold; Bronze solo alimenta Silver."
+
+- id: GOV-ARC-002
+  title: Sin SELECT * en capas de consumo
+  nature: D
+  category: arquitectura
+  pillar: data_contract
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pre-commit, pr]
+  requires: {glob: ["modeling/dbt/models/**/*.sql", "publishing/**/*.sql"]}
+  source: {doc: 01-data-principles.md, section: "§8", quote: "El consumidor accede a datos a través de interfaces estables, no a estructuras físicas subyacentes."}
+  kb: [KB_06, KB_05]
+  check: {kind: plugin, name: sql.select_star}
+  remediation: "Enumerar las columnas del contrato en el SELECT final."
+
+- id: GOV-ARC-003
+  title: dbt con ref()/source() (sin relaciones físicas hardcodeadas)
+  nature: D
+  category: arquitectura
+  pillar: product_definition
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  requires: {glob: ["modeling/dbt/models/**/*.sql"]}
+  source: {doc: 01-data-principles.md, section: "§8", quote: "El consumo no debe depender de estructuras físicas."}
+  kb: [KB_07]
+  check: {kind: plugin, name: sql.hardcoded_relations}
+  remediation: "Reemplazar `database.tabla` por {{ ref('modelo') }} o {{ source('fuente', 'tabla') }}."
+
+- id: GOV-ARC-004
+  title: Sin sobrescritura destructiva en datos críticos
+  nature: D
+  category: arquitectura
+  pillar: data_quality
+  severity: HIGH
+  technique: ast
+  enforcement: [pre-commit, pr]
+  requires: {glob: ["src/**/*.py", "src/**/*.sql", "shared/**/*.py", "modeling/dbt/models/**/*.sql"]}
+  source: {doc: 01-data-principles.md, section: "§5", quote: "No se permite sobrescritura destructiva de datos clasificados como críticos."}
+  kb: [KB_06]
+  check: {kind: plugin, name: arch.destructive_writes}
+  remediation: "Usar MERGE/append idempotente sobre Iceberg/Delta; conservar historia vía Time Travel."
+
+- id: GOV-ARC-005
+  title: Almacenamiento con Time Travel
+  nature: D
+  category: arquitectura
+  pillar: data_quality
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, gate]
+  stages: *from_design
+  source: {doc: 01-data-principles.md, section: "§5", quote: "Las plataformas de almacenamiento deben soportar Time Travel."}
+  kb: [KB_06]
+  check: {kind: plugin, name: arch.time_travel_format}
+  remediation: "Declarar spec.modeling.table_format: iceberg (estándar dbt-glue) | delta | hudi."
+
+- id: GOV-ARC-006
+  title: Dominios de negocio, no de tecnología
+  nature: D
+  category: arquitectura
+  pillar: business_alignment
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  source: {doc: 01-data-principles.md, section: "§7", quote: "No se permiten estructuras de datos orientadas solo a tecnología o a sistemas de origen."}
+  kb: [KB_03, KB_01]
+  check: {kind: plugin, name: arch.tech_domain}
+  remediation: "Reubicar en un dominio de negocio (Customer, Sales, Pricing, Product, Finance, Supply Chain...)."
+
+- id: GOV-ARC-007
+  title: Modelos Gold con tests de claves
+  nature: D
+  category: arquitectura
+  pillar: data_quality
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  requires: {glob: ["modeling/dbt/models/gold/**/*.sql"]}
+  source: {doc: 08-data-quality-framework.md, section: "§10.2-§10.3", quote: "validación de claves de negocio"}
+  kb: [KB_07, KB_08]
+  check: {kind: plugin, name: sql.gold_key_tests}
+  remediation: "Agregar tests unique/not_null (o unique_combination_of_columns) sobre la clave del modelo."
+
+- id: GOV-ARC-008
+  title: Modelos dbt documentados
+  nature: H
+  category: arquitectura
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  requires: {glob: ["modeling/dbt/models/**/*.sql"]}
+  source: {doc: 09-metadata-governance.md, section: "§22"}
+  kb: [KB_07, KB_09]
+  check: {kind: plugin, name: sql.model_docs}
+  semantic_question: "¿La descripción de cada modelo declara grano, universo y reglas de negocio principales?"
+  remediation: "Agregar description (≥20 caracteres) a cada modelo Silver/Gold en schema.yml."
+
+- id: GOV-ARC-009
+  title: Modelado dimensional correcto
+  nature: S
+  category: arquitectura
+  pillar: product_definition
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 06-data-product-definition.md, section: "§14 (Bloque 8)", quote: "entidades principales, hechos y dimensiones si aplica, claves de negocio, granularidad, relaciones, jerarquías"}
+  kb: [KB_07]
+  semantic_question: "¿Cada hecho declara un grano único, sus medidas son coherentes con ese grano y las dimensiones son conformadas (tiempo, producto, tienda, canal, país)?"
+  remediation: "Revisar grano, aditividad y conformidad dimensional con Arquitectura."
+
+- id: GOV-ARC-010
+  title: Uso apropiado de ARTS
+  nature: S
+  category: arquitectura
+  pillar: product_definition
+  severity: MEDIUM
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 06-data-product-definition.md, section: "§14 Relación con ARTS", quote: "se adopta como un template de aceleración y marco de referencia semántico, no como una imposición rígida"}
+  kb: [KB_07]
+  semantic_question: "¿La elección alineado/extensión/modelo propio está justificada por el lenguaje del dominio y documentada?"
+  remediation: "Documentar la decisión en un ADR."
+
+- id: GOV-ARC-011
+  title: Patrón batch / real-time justificado por valor
+  nature: S
+  category: arquitectura
+  pillar: business_alignment
+  severity: MEDIUM
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 01-data-principles.md, section: "§11", quote: "Los patrones a implementar es una decisión de diseño basada en el valor de negocio."}
+  kb: [KB_06]
+  semantic_question: "¿La latencia elegida (batch/streaming/CDC) está justificada por la decisión de negocio que habilita?"
+  remediation: "Justificar la latencia frente al caso de uso o simplificar el patrón."
+
+- id: GOV-ARC-012
+  title: Límites de dominio respetados
+  nature: S
+  category: arquitectura
+  pillar: business_alignment
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 02.1-business-capability-alignment.md, section: "§7", quote: "los dominios deben mantener boundaries claros"}
+  kb: [KB_03, KB_01]
+  semantic_question: "¿El producto redefine entidades de otro dominio (cliente, producto, tienda) en vez de consumirlas por contrato?"
+  remediation: "Consumir la entidad maestra del dominio dueño vía su Data Product."
+
+- id: GOV-ARC-013
+  title: Diseño AI-ready (feature reuse)
+  nature: S
+  category: arquitectura
+  pillar: ai_ml_readiness
+  severity: LOW
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 01-data-principles.md, section: "§10", quote: "Los Data Products deben ser compatibles con feature reuse."}
+  kb: [KB_15]
+  semantic_question: "¿Las entidades y atributos del producto permiten derivar features reutilizables (claves estables, historia, timestamps de evento)?"
+  remediation: "Exponer claves estables y timestamps de evento/actualización."
+
+- id: GOV-ARC-014
+  title: Arquitectura de datos documentada
+  nature: D
+  category: arquitectura
+  pillar: product_definition
+  severity: MEDIUM
+  technique: path
+  enforcement: [pr, gate]
+  scope: repo
+  stages: {ideacion: "OFF", diseno: MEDIUM, desarrollo: HIGH, gate: HIGH, operacion: HIGH, salida: "OFF"}
+  source: {doc: 06-data-product-definition.md, section: "§26 DoR", quote: "arquitectura de datos definida (final o transicional)"}
+  kb: [KB_06]
+  check: {kind: exists, complete: true, any: ["docs/architecture/*.md", "docs/architecture/*.png", "docs/architecture/*.svg", "docs/architecture/*.drawio", "docs/architecture/*.mmd"],
+          message: "docs/architecture/ sin diagrama ni descripción de arquitectura"}
+  remediation: "Versionar el diagrama (C4/flujo) y su descripción en docs/architecture/."
+
+# =====================================================================================================
+# SML · SEMANTIC LAYER Y MÉTRICAS  (01 §9; 11-semantic-layer-framework; 14 §12, §15.7)
+# =====================================================================================================
+- id: GOV-SML-001
+  title: Ficha de métrica completa
+  nature: D
+  category: semantica
+  pillar: semantic_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  requires: {artifact: dbt_yml}
+  source: {doc: 11-semantic-layer-framework.md, section: "§15", quote: "Nombre, Descripción funcional, Tag, Fórmula, Unidad, Granularidad, Regla de agregación, Filtros, Data Product fuente, Campos, Owner, Término de glosario, Sensibilidad"}
+  kb: [KB_12]
+  check: {kind: plugin, name: semantic.metric_card}
+  remediation: "Completar label, description y meta (owner, glossary_term, unit, granularity, aggregation, source_data_product, source_fields, sensitivity)."
+
+- id: GOV-SML-002
+  title: Una métrica, una definición
+  nature: D
+  category: semantica
+  pillar: semantic_readiness
+  severity: BLOCKER
+  technique: graph
+  enforcement: [pr]
+  requires: {artifact: dbt_yml}
+  source: {doc: 11-semantic-layer-framework.md, section: "§30", quote: "Si dos consumidores obtienen valores distintos para la misma métrica sin una diferencia explícitamente justificada, la semantic layer todavía no está cumpliendo su propósito."}
+  kb: [KB_12]
+  check: {kind: plugin, name: semantic.metric_unique}
+  remediation: "Consolidar en una definición oficial; variantes legítimas requieren nombre distinto y justificación."
+
+- id: GOV-SML-003
+  title: No redefinir métricas corporativas localmente
+  nature: D
+  category: semantica
+  pillar: semantic_readiness
+  severity: BLOCKER
+  technique: graph
+  enforcement: [pr]
+  requires: {artifact: dbt_yml}
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§12.2", quote: "Se gobierna centralmente y no puede ser modificada por un dominio, proyecto o Data Product Analítico de forma unilateral."}
+  kb: [KB_12, KB_14]
+  check: {kind: plugin, name: semantic.corporate_metrics}
+  remediation: "Referenciar la métrica corporativa de la Semantic Layer (meta.tier: referencia) en lugar de redefinirla."
+
+- id: GOV-SML-004
+  title: Métrica mapeada a término de glosario existente
+  nature: D
+  category: semantica
+  pillar: semantic_readiness
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr]
+  requires: {artifact: dbt_yml}
+  source: {doc: 11-semantic-layer-framework.md, section: "§11", quote: "toda métrica relevante debe mapearse a un término o definición oficial"}
+  kb: [KB_12, KB_09]
+  check: {kind: plugin, name: semantic.metric_glossary}
+  remediation: "Definir el término en el glosario o corregir meta.glossary_term."
+
+- id: GOV-SML-005
+  title: Ficha de dimensión compartida
+  nature: D
+  category: semantica
+  pillar: semantic_readiness
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 11-semantic-layer-framework.md, section: "§16", quote: "Nombre, Descripción, Nivel(es) de jerarquía, Clave de negocio, Dominio principal, ..., Data Product fuente, Owner"}
+  kb: [KB_12]
+  check:
+    kind: each
+    target: dimensions
+    path: spec.dimensions
+    noun: dimensión
+    keys:
+      description: {not_placeholder: true, min_length: 20}
+      business_key: {not_placeholder: true}
+      domain: {not_placeholder: true}
+      source_data_product: {not_placeholder: true}
+      owner: {not_placeholder: true}
+  remediation: "Completar la ficha de cada dimensión compartida."
+
+- id: GOV-SML-006
+  title: Jerarquías gobernadas
+  nature: D
+  category: semantica
+  pillar: semantic_readiness
+  severity: LOW
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 11-semantic-layer-framework.md, section: "§17", quote: "niveles, reglas de agregación, tratamiento de faltantes, manejo de reestructuraciones, y ownership del cambio"}
+  kb: [KB_12]
+  check:
+    kind: each
+    target: dimensions
+    path: spec.dimensions
+    noun: dimensión
+    when_item: [{item: hierarchy, present: true}]
+    keys:
+      hierarchy.levels: {min_items: 2}
+      hierarchy.change_owner: {not_placeholder: true}
+      hierarchy.missing_values: {not_placeholder: true}
+  remediation: "Declarar niveles, tratamiento de faltantes y owner del cambio de la jerarquía."
+
+- id: GOV-SML-007
+  title: Publicación a consumidores solo desde capas certificadas
+  nature: D
+  category: semantica
+  pillar: semantic_readiness
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  requires: {glob: ["publishing/**/*.sql", "publishing/**/*.lkml", "publishing/**/*.yml", "publishing/**/*.yaml"]}
+  source: {doc: 01-data-principles.md, section: "§9", quote: "BI, herramientas de autoservicio y APIs analíticas no deben consumir directamente tablas físicas."}
+  kb: [KB_12, KB_14]
+  check: {kind: plugin, name: sql.publishing_sources}
+  remediation: "Exponer vistas sobre Gold/Serving/Semantic; nunca Bronze/Silver."
+
+- id: GOV-SML-008
+  title: Métricas estratégicas fuera de la herramienta BI
+  nature: H
+  category: semantica
+  pillar: semantic_readiness
+  severity: HIGH
+  technique: regex
+  enforcement: [pr]
+  requires: {glob: ["**/*.lkml", "**/*.dax", "**/*.tmdl", "**/*.bim"]}
+  source: {doc: 11-semantic-layer-framework.md, section: "§19", quote: "Cuanto más estratégica es una métrica, menos debería depender de su implementación aislada en un dashboard."}
+  kb: [KB_12, KB_14]
+  check: {kind: plugin, name: semantic.bi_logic}
+  semantic_question: "¿La medida BI es una presentación de la métrica oficial o reimplementa su lógica?"
+  remediation: "Consumir la métrica desde la Semantic Layer; en BI solo formato e interacción."
+
+- id: GOV-SML-009
+  title: Definición de métrica inequívoca
+  nature: S
+  category: semantica
+  pillar: semantic_readiness
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 11-semantic-layer-framework.md, section: "§15, §22"}
+  kb: [KB_12]
+  semantic_question: "¿La fórmula, filtros y granularidad de cada métrica permiten calcularla de una sola forma, coherente con su término de glosario?"
+  remediation: "Precisar fórmula, inclusiones/exclusiones y tratamiento de anulaciones/devoluciones."
+
+- id: GOV-SML-010
+  title: Reconciliación de KPIs entre consumidores
+  nature: O
+  category: semantica
+  pillar: semantic_readiness
+  severity: HIGH
+  technique: human
+  enforcement: [runtime]
+  source: {doc: 08-data-quality-framework.md, section: "§18", quote: "dos dashboards no deben mostrar valores distintos para la misma métrica"}
+  kb: [KB_12, KB_17]
+  remediation: "Implementar reconciliación KPI vs Data Product base en observabilidad semántica."
+
+# =====================================================================================================
+# CNS · CONSUMO Y EXPLOTACIÓN  (14-data-consumption-exploitation-framework)
+# =====================================================================================================
+- id: GOV-CNS-001
+  title: Patrón de consumo declarado (12 tipologías)
+  nature: D
+  category: consumo
+  pillar: value_adoption
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  when: [{dp: spec.role, equals: consumo}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§9"}
+  kb: [KB_13]
+  check:
+    kind: field
+    target: data_product
+    path: spec.consumption_pattern
+    assert: {enum: [bi_ejecutivo, bi_gestion, reporting_administrado, regulatorio_compliance, self_service_gobernado, exploracion_alto_volumen,
+                    aplicacion_operacional, api_consulta_operacional, analitica_embebida, extraccion_distribucion_masiva, activacion_reverse_etl, ai_ml]}
+  remediation: "Declarar spec.consumption_pattern según la matriz 14 §14."
+
+- id: GOV-CNS-002
+  title: Clasificación en las 12 dimensiones de consumo
+  nature: D
+  category: consumo
+  pillar: value_adoption
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: *from_design
+  when: [{dp: spec.role, equals: consumo}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§13", quote: "debe ser clasificada de forma obligatoria usando las siguientes 12 dimensiones"}
+  kb: [KB_13]
+  check:
+    kind: field
+    target: data_product
+    path: spec.consumption
+    assert: {keys: [audience, objective, interaction, volume, granularity, latency, refresh_frequency, concurrency, action, criticality, security, reuse]}
+  remediation: "Completar spec.consumption con las 12 dimensiones."
+
+- id: GOV-CNS-003
+  title: Plataforma de exposición acorde al patrón
+  nature: D
+  category: consumo
+  pillar: value_adoption
+  severity: HIGH
+  technique: graph
+  enforcement: [pr]
+  when: [{dp: spec.role, equals: consumo}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§10, §14, §15", quote: "Prohibido usar Power BI o MicroStrategy para este fin."}
+  kb: [KB_13, KB_14]
+  check: {kind: plugin, name: consumption.platform_matrix}
+  remediation: "Seleccionar la plataforma según la matriz 14 §14 (ver rules/registry/consumption_matrix.yaml)."
+
+- id: GOV-CNS-004
+  title: Consumo solo desde Data Products maestros
+  nature: D
+  category: consumo
+  pillar: data_contract
+  severity: BLOCKER
+  technique: graph
+  enforcement: [pr]
+  when: [{dp: spec.role, equals: consumo}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§8.2, §16.1", quote: "Todo Data Product Analítico de Consumo debe alimentarse de datos publicados por un Data Products Gobernados y Certificados"}
+  kb: [KB_13]
+  check: {kind: plugin, name: consumption.certified_sources}
+  remediation: "Alimentar el producto solo con inputs type: data_product (maestros certificados)."
+
+- id: GOV-CNS-005
+  title: API operacional sobre serving operacional
+  nature: D
+  category: consumo
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§10.5", quote: "Queda estrictamente prohibido que las APIs consuman directamente capas de almacenamiento analítico pesado"}
+  kb: [KB_14]
+  check: {kind: plugin, name: consumption.api_serving}
+  remediation: "Interponer una Serving Layer operacional (Redis, DynamoDB, PostgreSQL indexado)."
+
+- id: GOV-CNS-006
+  title: Reverse ETL con consentimiento y auditoría
+  nature: D
+  category: consumo
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pr, gate]
+  when: [{dp: spec.consumption_pattern, equals: activacion_reverse_etl}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§10.6", quote: "Debe contar obligatoriamente con auditoría de ejecución y control de consentimiento explícito (opt-in/opt-out)"}
+  kb: [KB_14, KB_10]
+  check: {kind: field, target: data_product, fields: {spec.consumption.consent_control: {is_true: true}, spec.consumption.execution_audit: {is_true: true}}}
+  remediation: "Declarar e implementar consent_control y execution_audit antes de activar cargas."
+
+- id: GOV-CNS-007
+  title: Extracción masiva con formato y controles de entrega
+  nature: D
+  category: consumo
+  pillar: data_contract
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  when: [{dp: spec.consumption_pattern, equals: extraccion_distribucion_masiva}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§9.10", quote: "Ejecución asíncrona, empaquetado y compresión (Parquet, CSV, JSON), ... controles de checksum y reintentos"}
+  kb: [KB_14]
+  check:
+    kind: field
+    target: data_product
+    fields:
+      spec.consumption.delivery.format: {enum: [parquet, csv, json]}
+      spec.consumption.delivery.checksum: {is_true: true}
+      spec.consumption.delivery.retries: {required: true}
+  remediation: "Declarar formato, checksum y política de reintentos de la entrega."
+
+- id: GOV-CNS-008
+  title: Certificación de Data Product Analítico de Consumo (8 validaciones)
+  nature: D
+  category: consumo
+  pillar: value_adoption
+  severity: BLOCKER
+  technique: graph
+  enforcement: [gate]
+  summary: true
+  stages: {ideacion: "OFF", diseno: "OFF", desarrollo: LOW, salida: "OFF"}
+  when: [{dp: spec.role, equals: consumo}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§16"}
+  kb: [KB_14]
+  check:
+    kind: composite
+    requires:
+      fuente: [GOV-CNS-004]
+      semantica: [GOV-SML-003, GOV-SML-007, GOV-SML-008]
+      ownership: [GOV-DPD-007, GOV-DPD-008]
+      arquitectura: [GOV-CNS-003]
+      seguridad: [GOV-SEC-001, GOV-SEC-010]
+      operacion: [GOV-DPD-013]
+      calidad: [GOV-CNS-009, GOV-CNS-010]
+      ciclo_de_vida: [GOV-LCY-001, GOV-MET-012]
+  remediation: "Cerrar las validaciones listadas para catalogarlo como Certificado."
+
+- id: GOV-CNS-009
+  title: Estado de calidad del maestro visible al consumidor
+  nature: D
+  category: consumo
+  pillar: data_quality
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  when: [{dp: spec.role, equals: consumo}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§16.7", quote: "Dispone de un canal o visor que expone el estado de calidad del Data Product maestro"}
+  kb: [KB_14, KB_08]
+  check: {kind: field, target: data_product, path: spec.consumption.quality_status_visible, assert: {is_true: true}}
+  remediation: "Exponer en el tablero/API el estado de calidad del maestro y declararlo."
+
+- id: GOV-CNS-010
+  title: Sin filtros locales que oculten calidad del maestro
+  nature: H
+  category: consumo
+  pillar: data_quality
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  requires: {glob: ["**/*.lkml", "**/*.dax", "**/*.tmdl", "publishing/**/*.sql"]}
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§8.8", quote: "Queda prohibido implementar lógica dentro de un Data Product Analítico de Consumo para corregir datos nulos"}
+  kb: [KB_14]
+  check: {kind: plugin, name: consumption.local_quality_filters}
+  semantic_question: "¿El filtro responde a una regla de negocio documentada o está ocultando un problema de calidad del maestro?"
+  remediation: "Reportar la anomalía y corregirla en el Data Product maestro."
+
+- id: GOV-CNS-011
+  title: Inactividad → candidato a retiro
+  nature: D
+  category: consumo
+  pillar: value_adoption
+  severity: HIGH
+  technique: threshold
+  enforcement: [periodic]
+  stages: *run_only
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§17, §21", quote: "sin usuarios o sistemas registrados en los últimos dos meses"}
+  kb: [KB_14, KB_19]
+  check: {kind: plugin, name: consumption.inactivity}
+  remediation: "Reclasificar a `en_retiro` o justificar su permanencia con el Business Owner."
+
+- id: GOV-CNS-012
+  title: Detalle transaccional masivo en BI
+  nature: D
+  category: consumo
+  pillar: value_adoption
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§8.7, §15.8", quote: "La necesidad de consultar detalle transaccional no justifica cargar millones de registros dentro de un ... dashboard."}
+  kb: [KB_13]
+  check: {kind: plugin, name: consumption.bi_detail}
+  remediation: "Usar estructuras resumidas; el detalle va a un DP de exploración o extracción."
+
+- id: GOV-CNS-013
+  title: Patrón fit-for-purpose
+  nature: S
+  category: consumo
+  pillar: value_adoption
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  when: [{dp: spec.role, equals: consumo}]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§3, §8.1", quote: "responder estrictamente a la naturaleza del caso de uso, la audiencia y el patrón de explotación, y no a la inercia tecnológica"}
+  kb: [KB_13]
+  semantic_question: "Dadas audiencia, interacción, volumen, latencia y acción, ¿el patrón y la plataforma elegidos son los adecuados según la matriz 14 §14?"
+  remediation: "Reevaluar el patrón con la secuencia Caso de uso → Objetivo → Consumidor → Patrón → RNF → Maestro → Plataforma."
+
+- id: GOV-CNS-014
+  title: Reutilizar antes de crear
+  nature: S
+  category: consumo
+  pillar: value_adoption
+  severity: MEDIUM
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§8.6", quote: "No se autoriza la creación de Data Products Analíticos redundantes si ya existe un producto publicado o un modelo semántico certificado adecuado."}
+  kb: [KB_13]
+  semantic_question: "¿Existe en el catálogo un producto o modelo semántico certificado que ya resuelva esta necesidad?"
+  remediation: "Buscar en el catálogo y documentar por qué no se reutiliza."
+
+# =====================================================================================================
+# AIM · AI / ML / GenAI  (12-ai-ml-data-framework; 14 §9.12, §11.6)
+# =====================================================================================================
+- id: GOV-AIM-001
+  title: Features con ficha completa
+  nature: D
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§12", quote: "nombre, definición, lógica de cálculo, ventana temporal, granularidad, owner, Data Product fuente, frecuencia, calidad esperada, sensibilidad, contexto de uso"}
+  kb: [KB_15]
+  check:
+    kind: each
+    target: features
+    path: spec.features
+    noun: feature
+    keys:
+      definition: {not_placeholder: true}
+      logic: {not_placeholder: true}
+      window: {not_placeholder: true}
+      granularity: {not_placeholder: true}
+      owner: {not_placeholder: true}
+      source_data_product: {not_placeholder: true}
+      frequency: {not_placeholder: true}
+      expected_quality: {not_placeholder: true}
+      sensitivity: {not_placeholder: true}
+      version: {semver: true}
+  remediation: "Completar la ficha de cada feature (12 §12) y versionarla."
+
+- id: GOV-AIM-002
+  title: Dataset de entrenamiento especificado y versionado
+  nature: D
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§14", quote: "Un modelo no debe entrenarse sobre un dataset que no pueda reconstruirse razonablemente."}
+  kb: [KB_15]
+  check:
+    kind: each
+    target: training_sets
+    path: spec.training_sets
+    noun: training set
+    keys:
+      source_data_products: {min_items: 1}
+      features: {min_items: 1}
+      target: {not_placeholder: true}
+      temporal_window: {not_placeholder: true}
+      population: {not_placeholder: true}
+      filters: {required: true}
+      exclusions: {required: true}
+      version: {semver: true}
+      min_quality: {not_placeholder: true}
+      storage_format: {enum: [delta, iceberg, hudi]}
+  remediation: "Especificar fuentes, features, target, ventana, población, filtros, exclusiones, versión, calidad mínima y formato time-travel."
+
+- id: GOV-AIM-003
+  title: Evaluación con partición temporal y control de leakage
+  nature: D
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§15", quote: "dataset de validación, dataset de test, criterio de partición temporal o lógica, métricas de evaluación, controles de leakage"}
+  kb: [KB_15]
+  check:
+    kind: each
+    target: training_sets
+    path: spec.training_sets
+    noun: training set
+    keys:
+      evaluation.validation: {not_placeholder: true}
+      evaluation.test: {not_placeholder: true}
+      evaluation.split_strategy: {not_placeholder: true}
+      evaluation.metrics: {min_items: 1}
+      evaluation.leakage_controls: {min_items: 1}
+  remediation: "Declarar validación, test, estrategia de partición, métricas y controles de leakage."
+
+- id: GOV-AIM-004
+  title: Consistencia entrenamiento ↔ inferencia
+  nature: D
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: BLOCKER
+  technique: graph
+  enforcement: [pr, gate]
+  stages: {ideacion: "OFF", diseno: MEDIUM, desarrollo: HIGH}
+  requires: {artifact: training_sets}
+  source: {doc: 12-ai-ml-data-framework.md, section: "§16", quote: "No debe promoverse un caso AI a producción si las features o inputs de inferencia no son consistentes con los del entrenamiento."}
+  kb: [KB_15]
+  check: {kind: plugin, name: aiml.train_inference_consistency}
+  remediation: "Usar en inferencia exactamente las mismas definiciones/versiones de features que en entrenamiento."
+
+- id: GOV-AIM-005
+  title: Features derivadas de Data Products declarados
+  nature: D
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: graph
+  enforcement: [pr]
+  requires: {artifact: features}
+  source: {doc: 12-ai-ml-data-framework.md, section: "§10", quote: "La AI debe consumir activos gobernados siempre que sea posible"}
+  kb: [KB_15]
+  check: {kind: plugin, name: aiml.feature_sources}
+  remediation: "Declarar el Data Product fuente como input con contrato."
+
+- id: GOV-AIM-006
+  title: Monitores de drift de datos y de modelo
+  nature: D
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [gate]
+  stages: *ops_high
+  when: [{dp: spec.type, equals: ai_ml}]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§23", quote: "drift de datos, drift de modelos"}
+  kb: [KB_15, KB_17]
+  check: {kind: plugin, name: aiml.drift_monitors}
+  remediation: "Agregar monitores con signal data_drift y model_drift."
+
+- id: GOV-AIM-007
+  title: PII en features con consentimiento y minimización
+  nature: D
+  category: ai_ml
+  pillar: security_privacy
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  requires: {artifact: features}
+  source: {doc: 12-ai-ml-data-framework.md, section: "§22", quote: "datos personales en entrenamiento, consentimiento de uso de datos personales"}
+  kb: [KB_15, KB_10]
+  check: {kind: plugin, name: aiml.pii_training}
+  remediation: "Declarar consent_basis y minimization para cada feature PII."
+
+- id: GOV-AIM-008
+  title: Corpus RAG gobernado
+  nature: D
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§18-§19", quote: "No debe exponerse GenAI sobre contenido corporativo sin controlar fuentes, clasificación, trazabilidad y alcance de uso."}
+  kb: [KB_16]
+  check:
+    kind: each
+    target: rag
+    path: spec.sources
+    noun: fuente RAG
+    keys:
+      official: {is_true: true}
+      version: {not_placeholder: true}
+      classification: {enum: [publico, interno, confidencial, sensible_pii]}
+      owner: {not_placeholder: true}
+      access_scope: {not_placeholder: true}
+  remediation: "Solo fuentes oficiales, versionadas, clasificadas, con owner y alcance de acceso."
+
+- id: GOV-AIM-009
+  title: Retención de prompts y embeddings
+  nature: D
+  category: ai_ml
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§22", quote: "retención de prompts y embeddings"}
+  kb: [KB_16]
+  check: {kind: field, target: rag, fields: {spec.retention.prompts: {not_placeholder: true}, spec.retention.embeddings: {not_placeholder: true}}}
+  remediation: "Declarar spec.retention.prompts y spec.retention.embeddings."
+
+- id: GOV-AIM-010
+  title: Output del modelo gobernado como Data Product
+  nature: D
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  stages: *from_design
+  when: [{dp: spec.type, equals: ai_ml}]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§17", quote: "Los outputs de modelos no deben verse solo como artefactos internos."}
+  kb: [KB_15]
+  check: {kind: count, target: data_product, path: spec.outputs, where: [{item: type, in: [modelo_score, feature_set, documento_rag]}], min: 1,
+          message: "El producto AI/ML no declara outputs de tipo modelo_score / feature_set / documento_rag"}
+  remediation: "Declarar el output del modelo con consumidor, canal y SLA."
+
+- id: GOV-AIM-011
+  title: Riesgo de leakage en features
+  nature: S
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§15, §21"}
+  kb: [KB_15]
+  semantic_question: "¿Alguna feature usa información posterior al momento de predicción (ventanas que cruzan la fecha de corte del target)?"
+  remediation: "Recalcular features con ventanas cerradas antes del evento a predecir (point-in-time)."
+
+- id: GOV-AIM-012
+  title: Problema que requiere primero un mejor Data Product base
+  nature: S
+  category: ai_ml
+  pillar: ai_ml_readiness
+  severity: MEDIUM
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 12-ai-ml-data-framework.md, section: "§28", quote: "intentar resolver con AI problemas que todavía requieren primero un mejor Data Product base"}
+  kb: [KB_15]
+  semantic_question: "¿El caso AI compensa con el modelo carencias de calidad o completitud del Data Product fuente?"
+  remediation: "Priorizar la mejora del Data Product base."
+
+# =====================================================================================================
+# OBS · OBSERVABILIDAD  (13-data-observability; 08 §17)
+# =====================================================================================================
+- id: GOV-OBS-001
+  title: Monitores del Data Product definidos
+  nature: D
+  category: observabilidad
+  pillar: observability_operations
+  severity: HIGH
+  technique: path
+  enforcement: [pr, gate]
+  scope: repo
+  stages: *gate_blocker
+  source: {doc: 13-data-observability.md, section: "§3", quote: "No se puede confiar en un Data Product que no puede observarse de forma suficiente."}
+  kb: [KB_17]
+  check: {kind: exists, any: ["observability/alarms/**/*.yaml", "observability/alarms/**/*.yml", "observability/alarms/**/*.json"],
+          message: "Sin monitores en observability/alarms/"}
+  remediation: "Definir monitores en observability/alarms/ (freshness, volumen, esquema, calidad, linaje)."
+
+- id: GOV-OBS-002
+  title: Cobertura de los 5 pilares de observabilidad
+  nature: D
+  category: observabilidad
+  pillar: observability_operations
+  severity: HIGH
+  technique: count
+  enforcement: [pr, gate]
+  stages: {ideacion: "OFF", diseno: "OFF", desarrollo: MEDIUM, salida: "OFF"}
+  requires: {artifact: monitors}
+  source: {doc: 13-data-observability.md, section: "§9", quote: "Freshness · Volumen · Esquema · Calidad · Lineage / Impacto"}
+  kb: [KB_17]
+  check: {kind: plugin, name: observability.five_pillars}
+  remediation: "Agregar monitores para cada pilar faltante."
+
+- id: GOV-OBS-003
+  title: Monitores con severidad, owner y canal
+  nature: D
+  category: observabilidad
+  pillar: observability_operations
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 13-data-observability.md, section: "§24, §28", quote: "inundar a la organización con alertas irrelevantes sin severidad ni ownership claro"}
+  kb: [KB_17]
+  check:
+    kind: each
+    target: monitors
+    path: spec.monitors
+    noun: monitor
+    keys:
+      signal: {enum: [freshness, volume, schema, quality, lineage, pipeline, usage, security, data_drift, model_drift, retrieval, latency, cost]}
+      severity: {enum: [critico, alto, medio, bajo]}
+      owner: {not_placeholder: true}
+      channel: {not_placeholder: true}
+      threshold: {required: true}
+  remediation: "Completar signal, threshold, severity (critico|alto|medio|bajo), owner y channel."
+
+- id: GOV-OBS-004
+  title: Health indicators del Data Product
+  nature: D
+  category: observabilidad
+  pillar: observability_operations
+  severity: MEDIUM
+  technique: count
+  enforcement: [pr, gate]
+  stages: *ops_high
+  source: {doc: 13-data-observability.md, section: "§25", quote: "Cada Data Product debería definir indicadores mínimos de salud."}
+  kb: [KB_17]
+  check: {kind: count, target: monitors, path: spec.health_indicators, min: 3, message: "Menos de 3 health indicators declarados (spec.health_indicators)"}
+  remediation: "Declarar ≥3 health indicators (freshness, disponibilidad, reglas críticas en verde, volumen en rango...)."
+
+- id: GOV-OBS-005
+  title: Monitores críticos enlazan runbook
+  nature: D
+  category: observabilidad
+  pillar: observability_operations
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr]
+  requires: {artifact: monitors}
+  source: {doc: 13-data-observability.md, section: "§23", quote: "alertas, incident management, runbooks"}
+  kb: [KB_17, KB_18]
+  check: {kind: plugin, name: observability.runbook_links}
+  remediation: "Agregar `runbook:` con la ruta a docs/engineering/runbook.md#seccion."
+
+- id: GOV-OBS-006
+  title: Observabilidad de uso y adopción
+  nature: D
+  category: observabilidad
+  pillar: value_adoption
+  severity: MEDIUM
+  technique: schema
+  enforcement: [gate]
+  stages: *ops_high
+  requires: {artifact: monitors}
+  source: {doc: 13-data-observability.md, section: "§18", quote: "Un producto de datos impecable técnicamente pero sin consumo puede requerir revisión estratégica."}
+  kb: [KB_17, KB_20]
+  check: {kind: plugin, name: observability.usage_monitor}
+  remediation: "Agregar un monitor con signal: usage."
+
+- id: GOV-OBS-007
+  title: Observabilidad de seguridad para datos sensibles
+  nature: D
+  category: observabilidad
+  pillar: security_privacy
+  severity: MEDIUM
+  technique: schema
+  enforcement: [gate]
+  stages: *ops_high
+  requires: {artifact: monitors}
+  source: {doc: 13-data-observability.md, section: "§22", quote: "accesos inusuales, ... extracciones masivas, ... uso inesperado de datasets clasificados"}
+  kb: [KB_17, KB_10]
+  check: {kind: plugin, name: observability.security_monitor}
+  remediation: "Agregar un monitor con signal: security (accesos/extracciones anómalas)."
+
+- id: GOV-OBS-008
+  title: Umbrales de alerta relevantes (sin ruido)
+  nature: S
+  category: observabilidad
+  pillar: observability_operations
+  severity: MEDIUM
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 13-data-observability.md, section: "§28"}
+  kb: [KB_17]
+  semantic_question: "¿Los umbrales de los monitores reflejan el propósito del producto (p.ej. freshness relativa a la ventana de negocio) y evitan alertas irrelevantes?"
+  remediation: "Recalibrar umbrales según el propósito y la criticidad."
+
+# =====================================================================================================
+# LCY · CICLO DE VIDA  (18-data-product-lifecycle)
+# =====================================================================================================
+- id: GOV-LCY-001
+  title: Estado del ciclo de vida válido
+  nature: D
+  category: lifecycle
+  pillar: product_definition
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pr, catalog]
+  source: {doc: 18-data-product-lifecycle.md, section: "§9", quote: "Identificado ... Retirado"}
+  kb: [KB_19]
+  check:
+    kind: field
+    target: data_product
+    path: spec.lifecycle.state
+    assert: {enum: [identificado, en_definicion, candidato_priorizacion, priorizado, en_diseno, en_desarrollo, listo_para_produccion,
+                    productivo, en_evolucion, en_consolidacion, en_retiro, retirado]}
+  remediation: "Declarar spec.lifecycle.state con uno de los 12 estados."
+
+- id: GOV-LCY-002
+  title: Transición de estado permitida
+  nature: D
+  category: lifecycle
+  pillar: product_definition
+  severity: HIGH
+  technique: diff
+  enforcement: [pr]
+  source: {doc: 18-data-product-lifecycle.md, section: "§22", quote: "Esto evita transiciones arbitrarias o poco trazables."}
+  kb: [KB_19]
+  check: {kind: plugin, name: lifecycle.transition}
+  remediation: "Avanzar un estado a la vez; usar `govkit gate --to <estado>` para verificar el gate."
+
+- id: GOV-LCY-003
+  title: Retiro gobernado
+  nature: D
+  category: lifecycle
+  pillar: value_adoption
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  when: [{dp: spec.lifecycle.state, in: [en_retiro, retirado]}]
+  source: {doc: 18-data-product-lifecycle.md, section: "§20", quote: "Un Data Product no debe retirarse 'silenciosamente'; el retiro debe ser gobernado."}
+  kb: [KB_19]
+  check:
+    kind: field
+    target: data_product
+    fields:
+      spec.retirement.date: {date: true}
+      spec.retirement.replacement: {not_placeholder: true}
+      spec.retirement.consumers_notified: {is_true: true}
+      spec.retirement.communication: {not_placeholder: true}
+  remediation: "Declarar fecha, reemplazo, comunicación y confirmación de notificación a consumidores."
+
+- id: GOV-LCY-004
+  title: Estado de catálogo coherente con el lifecycle
+  nature: D
+  category: lifecycle
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr, catalog]
+  requires: {artifact: openmetadata}
+  source: {doc: 18-data-product-lifecycle.md, section: "§27", quote: "candidate, active, in production, evolving, deprecated, retired"}
+  kb: [KB_19, KB_09]
+  check: {kind: plugin, name: lifecycle.catalog_status}
+  remediation: "Sincronizar `status` en openmetadata.yaml con el mapeo de rules/registry/lifecycle.yaml."
+
+- id: GOV-LCY-005
+  title: Mínimos de scoring por estado
+  nature: D
+  category: lifecycle
+  pillar: product_definition
+  severity: HIGH
+  technique: graph
+  enforcement: [gate]
+  stages: {ideacion: LOW, gate: BLOCKER, salida: "OFF"}
+  source: {doc: 19-scoring-model.md, section: "§27", quote: "Esto permite usar el scoring como gate de evolución y no solo como reporte."}
+  kb: [KB_20, KB_19]
+  check: {kind: post, name: scoring.stage_minimums}
+  remediation: "Elevar los pilares bajo el mínimo del estado (ver `govkit score`)."
+
+- id: GOV-LCY-006
+  title: Evolución coherente con el propósito
+  nature: S
+  category: lifecycle
+  pillar: product_definition
+  severity: MEDIUM
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 18-data-product-lifecycle.md, section: "§18", quote: "¿sigue siendo el mismo producto de datos o ya amerita uno nuevo?"}
+  kb: [KB_19]
+  semantic_question: "¿La evolución mantiene el propósito original o amerita versión MAJOR / nuevo Data Product?"
+  remediation: "Versionar como MAJOR o separar en un nuevo producto."
+
+- id: GOV-LCY-007
+  title: Revisión periódica de valor y adopción
+  nature: O
+  category: lifecycle
+  pillar: value_adoption
+  severity: MEDIUM
+  technique: human
+  enforcement: [periodic]
+  source: {doc: 18-data-product-lifecycle.md, section: "§26", quote: "Esto evita mantener productos vivos solo por inercia técnica."}
+  kb: [KB_19, KB_20]
+  remediation: "Revisar valor observado y adopción en el comité de dominio."
+
+# =====================================================================================================
+# SCO · SCORING  (19-scoring-model)
+# =====================================================================================================
+- id: GOV-SCO-001
+  title: Scorecard de 11 pilares con evidencia
+  nature: D
+  category: scoring
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: schema
+  enforcement: [gate]
+  stages: {ideacion: "OFF", diseno: LOW, gate: HIGH, operacion: HIGH, salida: "OFF"}
+  source: {doc: 19-scoring-model.md, section: "§10-§11, §28", quote: "Un score alto sin evidencia verificable debe considerarse provisional."}
+  kb: [KB_20]
+  check:
+    kind: field
+    target: scorecard
+    fields:
+      spec.evaluated_at: {date: true}
+      spec.pillars.business_alignment.score: {min: 1, max: 5, type: number}
+      spec.pillars.product_definition.score: {min: 1, max: 5, type: number}
+      spec.pillars.data_contract.score: {min: 1, max: 5, type: number}
+      spec.pillars.data_quality.score: {min: 1, max: 5, type: number}
+      spec.pillars.metadata_governance.score: {min: 1, max: 5, type: number}
+      spec.pillars.security_privacy.score: {min: 1, max: 5, type: number}
+      spec.pillars.observability_operations.score: {min: 1, max: 5, type: number}
+      spec.pillars.dataops_cicd.score: {min: 1, max: 5, type: number}
+      spec.pillars.value_adoption.score: {min: 1, max: 5, type: number}
+  remediation: "Registrar metadata/catalog/scorecard.yaml con puntaje 1-5 y evidencia por pilar."
+
+- id: GOV-SCO-002
+  title: Score declarado respaldado por evidencia automatizada
+  nature: D
+  category: scoring
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: graph
+  enforcement: [gate]
+  requires: {artifact: scorecard}
+  source: {doc: 19-scoring-model.md, section: "§28", quote: "Un score alto sin evidencia verificable debe considerarse provisional."}
+  kb: [KB_20]
+  check: {kind: post, name: scoring.divergence}
+  remediation: "Aportar evidencia (artefactos versionados) o ajustar el puntaje declarado."
+
+- id: GOV-SCO-003
+  title: Scoring vigente (cadencia trimestral)
+  nature: D
+  category: scoring
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: threshold
+  enforcement: [periodic]
+  stages: *run_only
+  requires: {artifact: scorecard}
+  source: {doc: 19-scoring-model.md, section: "§30", quote: "Productivo: trimestralmente."}
+  kb: [KB_20]
+  check: {kind: post, name: scoring.freshness}
+  remediation: "Re-evaluar el scorecard (trimestral en productivo; tras incidentes mayores)."
+
+- id: GOV-SCO-004
+  title: Evaluación colaborativa (≥2 roles)
+  nature: D
+  category: scoring
+  pillar: metadata_governance
+  severity: LOW
+  technique: count
+  enforcement: [gate]
+  source: {doc: 19-scoring-model.md, section: "§29", quote: "Debe evitarse tanto la autoevaluación unilateral como la evaluación externa completamente desconectada"}
+  kb: [KB_20]
+  check: {kind: field, target: scorecard, path: spec.evaluators, assert: {min_items: 2}}
+  remediation: "Registrar evaluadores de al menos dos roles (Business Owner, Arquitectura, Steward...)."
+
+- id: GOV-SCO-005
+  title: Nivel estratégico con mínimos de scoring
+  nature: D
+  category: scoring
+  pillar: value_adoption
+  severity: HIGH
+  technique: graph
+  enforcement: [gate]
+  stages: {ideacion: "OFF", diseno: "OFF", desarrollo: "OFF", salida: "OFF"}
+  when: [{dp: spec.lifecycle.target_level, equals: estrategico}]
+  source: {doc: 19-scoring-model.md, section: "§27", quote: "Score global ≥ 4 · Metadata ≥ 4 · Data Quality ≥ 4 · Observability ≥ 4 · Value & Adoption ≥ 4"}
+  kb: [KB_20]
+  check: {kind: post, name: scoring.strategic}
+  remediation: "Elevar los pilares indicados o ajustar el nivel objetivo."
+
+# =====================================================================================================
+# BIZ · ALINEAMIENTO DE NEGOCIO Y CASOS DE USO  (02; 02.1; 02.2)
+# =====================================================================================================
+- id: GOV-BIZ-001
+  title: Capacidad de negocio asociada
+  nature: D
+  category: negocio
+  pillar: business_alignment
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pr, gate]
+  stages: {ideacion: HIGH}
+  source: {doc: 02.1-business-capability-alignment.md, section: "§21 Regla final", quote: "Si una iniciativa de datos no puede trazarse a una capacidad de negocio clara, no debe considerarse estratégica"}
+  kb: [KB_01]
+  check: {kind: field, target: data_product, path: spec.business.capability, assert: {not_placeholder: true}}
+  remediation: "Declarar spec.business.capability (mapa de capacidades corporativo)."
+
+- id: GOV-BIZ-002
+  title: Caso de uso asociado
+  nature: D
+  category: negocio
+  pillar: business_alignment
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: {ideacion: MEDIUM}
+  source: {doc: 02.2-use-case-definition.md, section: "§19", quote: "crear Data Products sin caso de uso inicial"}
+  kb: [KB_02]
+  check: {kind: field, target: data_product, path: spec.business.use_cases, assert: {min_items: 1}}
+  remediation: "Referenciar al menos un caso de uso (ID UC-...)."
+
+- id: GOV-BIZ-003
+  title: KPI e hipótesis de valor
+  nature: D
+  category: negocio
+  pillar: business_alignment
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: {ideacion: MEDIUM}
+  source: {doc: 02.2-use-case-definition.md, section: "§21 Regla final", quote: "Si un caso de uso no puede explicar claramente qué problema resuelve, qué decisión mejora y qué KPI impacta, no está listo para convertirse en Data Product."}
+  kb: [KB_02, KB_01]
+  check: {kind: field, target: data_product, fields: {spec.business.kpis: {min_items: 1}, spec.business.value_hypothesis: {not_placeholder: true, min_length: 30}}}
+  remediation: "Declarar KPI(s) impactados y la hipótesis de valor."
+
+- id: GOV-BIZ-004
+  title: Problema y decisión habilitada explícitos
+  nature: D
+  category: negocio
+  pillar: business_alignment
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: {ideacion: MEDIUM}
+  source: {doc: 06-data-product-definition.md, section: "§9 (Bloque 3)", quote: "problema actual, oportunidad identificada, ... decisión o proceso que se busca mejorar"}
+  kb: [KB_02]
+  check: {kind: field, target: data_product, paths: [spec.business.problem, spec.business.decision_enabled], assert: {not_placeholder: true, min_length: 30}}
+  remediation: "Describir el problema de negocio y la decisión/proceso que habilita (≥30 caracteres)."
+
+- id: GOV-BIZ-005
+  title: Capacidad registrada en el mapa corporativo
+  nature: D
+  category: negocio
+  pillar: business_alignment
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr]
+  source: {doc: 02.1-business-capability-alignment.md, section: "§3", quote: "Toda iniciativa de datos relevante debe poder trazarse a una capacidad de negocio o a un habilitador corporativo explícito."}
+  kb: [KB_01]
+  check: {kind: plugin, name: business.capability_registered}
+  remediation: "Usar el nombre exacto de la capacidad del mapa corporativo (rules/registry/capabilities.yaml)."
+
+- id: GOV-BIZ-006
+  title: Caso de uso con información mínima obligatoria
+  nature: D
+  category: negocio
+  pillar: business_alignment
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 02.2-use-case-definition.md, section: "§10", quote: "Sin esos elementos, el caso de uso no debe pasar a priorización."}
+  kb: [KB_02]
+  check:
+    kind: field
+    target: use_cases
+    fields:
+      problem: {not_placeholder: true}
+      capability: {not_placeholder: true}
+      domain: {not_placeholder: true}
+      decision: {not_placeholder: true}
+      kpi: {not_placeholder: true}
+      consumers: {min_items: 1}
+      data_product_hypothesis: {not_placeholder: true}
+  remediation: "Completar los 7 elementos mínimos del caso de uso (02.2 §10)."
+
+- id: GOV-BIZ-007
+  title: Tipo de caso de uso
+  nature: D
+  category: negocio
+  pillar: business_alignment
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  source: {doc: 02.2-use-case-definition.md, section: "§8"}
+  kb: [KB_02]
+  check: {kind: field, target: use_cases, path: type, assert: {enum: [informacional, decisional, operacional, ai_predictivo]}}
+  remediation: "Clasificar como informacional, decisional, operacional o ai_predictivo."
+
+- id: GOV-BIZ-008
+  title: Formulación orientada a herramienta (anti-patrón)
+  nature: H
+  category: negocio
+  pillar: business_alignment
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr]
+  source: {doc: 02.2-use-case-definition.md, section: "§2, §19", quote: "formular casos de uso como 'necesitamos un dashboard' sin decisión ni KPI · plantear 'hacer AI' sin problema concreto"}
+  kb: [KB_02]
+  check:
+    kind: regex_scan
+    globs: ["metadata/catalog/data_product.yaml", "**/use_cases/*.yaml"]
+    pattern: '(?i)\b(necesitamos|queremos|se requiere)\s+(un|una)\s+(dashboard|reporte|tablero|vista\s*360|informe)\b|\bhacer\s+(ia|ai)\b|\baplicar\s+(ia|ai)\b'
+    message: "Necesidad formulada como herramienta y no como decisión/KPI"
+  semantic_question: "¿El problema está expresado como decisión de negocio y KPI, o como solicitud de una herramienta?"
+  remediation: "Reformular: qué decisión mejora, quién la toma y qué KPI cambia."
+
+- id: GOV-BIZ-009
+  title: Valor específico y medible
+  nature: S
+  category: negocio
+  pillar: business_alignment
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 02.2-use-case-definition.md, section: "§15", quote: "Específico, Trazable, Valioso, Implementable, Medible"}
+  kb: [KB_02]
+  semantic_question: "¿La hipótesis de valor es específica (meta, horizonte, línea base) y medible con los KPIs declarados?"
+  remediation: "Agregar línea base, meta y horizonte al KPI principal."
+
+- id: GOV-BIZ-010
+  title: Coherencia capacidad → dominio → producto
+  nature: S
+  category: negocio
+  pillar: business_alignment
+  severity: HIGH
+  technique: llm
+  enforcement: [pr]
+  source: {doc: 02.1-business-capability-alignment.md, section: "§6-§11"}
+  kb: [KB_01, KB_03]
+  semantic_question: "¿El dominio principal declarado es el que naturalmente corresponde a la capacidad y a las entidades del producto?"
+  remediation: "Revisar el dominio principal con el Domain Lead."
+
+- id: GOV-BIZ-011
+  title: Sponsorship real de negocio y tecnología
+  nature: O
+  category: negocio
+  pillar: business_alignment
+  severity: MEDIUM
+  technique: human
+  enforcement: [periodic]
+  source: {doc: 02-data-strategy.md, section: "§21", quote: "sponsorship real de negocio y tecnología"}
+  kb: [KB_01]
+  remediation: "Validar sponsor en el comité de portafolio."
+
+- id: GOV-BIZ-012
+  title: Priorización por valor, no por disponibilidad técnica
+  nature: O
+  category: negocio
+  pillar: business_alignment
+  severity: MEDIUM
+  technique: human
+  enforcement: [periodic]
+  source: {doc: 02-data-strategy.md, section: "§20", quote: "priorizar por disponibilidad técnica y no por valor"}
+  kb: [KB_01]
+  remediation: "Aplicar el modelo de priorización (04) en el comité."
+
+# =====================================================================================================
+# OMD · OPENMETADATA: ROLES CROSS-ACCOUNT E INGESTA  (pack omd)
+# =====================================================================================================
+- id: GOV-OMD-001
+  title: Rol cross-account llamado exactamente openmetadata-readonly
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: metadata_governance
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "2.3", quote: "Renombrar el role. El pod role asume exactamente openmetadata-readonly."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.role_name}
+  remediation: "Usar name: openmetadata-readonly."
+
+- id: GOV-OMD-002
+  title: Aislamiento de ambientes TEST↔TEST / PROD↔PROD
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: policy
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "2.1", quote: "No está permitido cruzar ambientes."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.env_isolation}
+  remediation: "El principal debe ser arn:aws:iam::<DG Corp del mismo ambiente>:role/cct-plataforma-pod-omdata."
+
+- id: GOV-OMD-003
+  title: Trust con sts:AssumeRole y sts:TagSession
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: policy
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "Cómo funciona", quote: "Si la trust policy destino no permite sts:TagSession, esa llamada falla."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.trust_actions}
+  remediation: "Action: [sts:AssumeRole, sts:TagSession]."
+
+- id: GOV-OMD-004
+  title: Policy del ambiente correcto
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "2.3", quote: "policies apunta a la policy del ambiente correcto."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.env_policy}
+  remediation: "Adjuntar 2057-omdata-policy-test (TEST) o 2057-omdata-policy-prod (PROD)."
+
+- id: GOV-OMD-005
+  title: Cuenta gestionada por access-analyzer
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: HIGH
+  technique: graph
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "2.2", quote: "Si la cuenta de datos no aparece en esta lista, este procedimiento no la cubre."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.managed_account}
+  remediation: "Coordinar con Seguridad Informática la incorporación de la cuenta."
+
+- id: GOV-OMD-006
+  title: Policy del ambiente con ARNs de cada cuenta
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: metadata_governance
+  severity: HIGH
+  technique: graph
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "2.4", quote: "Para incorporar una cuenta nueva no se crea un archivo: se agregan sus ARNs a la policy existente."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.policy_arns}
+  remediation: "Agregar 3 ARNs Glue (catalog, database/*, table/*) y 1 ARN DynamoDB por cuenta."
+
+- id: GOV-OMD-007
+  title: Sid descriptivo en trust
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "5", quote: "Reemplazar \"Sid\": \"test\" por un identificador que describa el propósito."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.sid}
+  remediation: "Usar p.ej. \"Sid\": \"AllowOMDPodAssumeRole\"."
+
+- id: GOV-OMD-008
+  title: Conexión de ingesta sin llaves estáticas
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: schema
+  enforcement: [pre-commit, pr]
+  source: {doc: lineamientos/openmetadata-guia-rapida-aws.md, section: "3", quote: "Nunca pegues llaves de AWS"}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.no_static_keys}
+  remediation: "Vaciar awsAccessKeyId/awsSecretAccessKey/awsSessionToken; usar solo awsRegion + assumeRoleArn."
+
+- id: GOV-OMD-009
+  title: Región válida (no zona de disponibilidad)
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: metadata_governance
+  severity: HIGH
+  technique: regex
+  enforcement: [pre-commit, pr]
+  source: {doc: lineamientos/openmetadata-guia-rapida-aws.md, section: "3", quote: "Es la región, no la zona: us-east-1a es incorrecto."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.region}
+  remediation: "Usar la región (us-east-1)."
+
+- id: GOV-OMD-010
+  title: Instancia OMD y cuenta del mismo ambiente
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: graph
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-guia-rapida-aws.md, section: "1", quote: "Las cuentas de TEST se conectan solo desde omd-test.cencosud.com."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.instance_env}
+  remediation: "Crear el servicio en la instancia del mismo ambiente que la cuenta."
+
+- id: GOV-OMD-011
+  title: Filtros de inclusión anclados
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: metadata_governance
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "1.2", quote: "Para coincidencia exacta se escribe ^dlk_gld_it_people_dwh$."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.filters_anchored}
+  remediation: "Anclar los patrones con ^...$ cuando se busca coincidencia exacta."
+
+- id: GOV-OMD-012
+  title: DynamoDB con filtro de tablas
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "1.1", quote: "Conviene filtrar tablas, programar el agente fuera de horario punta y declararlo ante Seguridad."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.dynamo_filter}
+  remediation: "Incluir explícitamente las tablas a catalogar."
+
+- id: GOV-OMD-013
+  title: S3 Storage filtrado a ^cencosud-
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "3.5", quote: "La policy solo permite listar y leer buckets con ese prefijo"}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.s3_filter}
+  remediation: "Agregar containerFilterPattern.includes: [^cencosud-]."
+
+- id: GOV-OMD-014
+  title: Session name por servicio (trazabilidad CloudTrail)
+  nature: D
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: LOW
+  technique: schema
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "5", quote: "Un nombre distinto por servicio (por ejemplo omd-<servicio>) permitiría atribuir cada llamada en CloudTrail."}
+  kb: [KB_21]
+  check: {kind: plugin, name: omd.session_name}
+  remediation: "Definir assumeRoleSessionName: omd-<servicio>."
+
+- id: GOV-OMD-015
+  title: Aprobación de Seguridad Informática del MR
+  nature: O
+  category: openmetadata
+  pack: omd
+  pillar: security_privacy
+  severity: BLOCKER
+  technique: human
+  enforcement: [pr]
+  source: {doc: lineamientos/openmetadata-cross-account-role.md, section: "2.6", quote: "El cambio no queda vigente antes de la aprobación."}
+  kb: [KB_21]
+  remediation: "Esperar aprobación de Seguridad Informática antes del Test Connection."
+
+# =====================================================================================================
+# DOC · CONSISTENCIA DE LA DOCUMENTACIÓN DEL FRAMEWORK  (pack docs — `govkit docs-lint`)
+# =====================================================================================================
+- id: GOV-DOC-001
+  title: Referencias cruzadas a documentos existentes
+  nature: D
+  category: documentacion
+  pack: docs
+  pillar: metadata_governance
+  severity: MEDIUM
+  technique: graph
+  enforcement: [pr]
+  source: {doc: 02-data-strategy.md, section: "§19", quote: "esta estrategia es el marco generador del resto del framework"}
+  kb: [KB_00]
+  check: {kind: plugin, name: docs.cross_refs}
+  remediation: "Corregir el nombre/numeración del documento referenciado."
+
+- id: GOV-DOC-002
+  title: Encabezado de documento (Versión, Estado, Alcance)
+  nature: D
+  category: documentacion
+  pack: docs
+  pillar: metadata_governance
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  source: {doc: 01-data-principles.md, section: "Encabezado"}
+  kb: [KB_00]
+  check: {kind: plugin, name: docs.header}
+  remediation: "Agregar Versión, Estado y Alcance al encabezado."
+
+- id: GOV-DOC-003
+  title: Numeración de secciones secuencial
+  nature: D
+  category: documentacion
+  pack: docs
+  pillar: metadata_governance
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  source: {doc: 06-data-product-definition.md, section: "estructura editorial"}
+  kb: [KB_00]
+  check: {kind: plugin, name: docs.section_numbering}
+  remediation: "Renumerar secciones (las reglas citan §N: la numeración es parte de la trazabilidad)."
+
+- id: GOV-DOC-004
+  title: Regla final presente
+  nature: D
+  category: documentacion
+  pack: docs
+  pillar: metadata_governance
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  source: {doc: 01-data-principles.md, section: "patrón editorial"}
+  kb: [KB_00]
+  check: {kind: plugin, name: docs.final_rule}
+  remediation: "Cerrar con la Regla final del documento."
+
+- id: GOV-DOC-005
+  title: Inventario de pendientes documentales
+  nature: D
+  category: documentacion
+  pack: docs
+  pillar: metadata_governance
+  severity: INFO
+  technique: regex
+  enforcement: [periodic]
+  source: {doc: 12-ai-ml-data-framework.md, section: "encabezado", quote: "Pendiente validar punto 19"}
+  kb: [KB_00]
+  check: {kind: plugin, name: docs.pending_notes}
+  remediation: "Resolver o asignar owner y fecha a cada pendiente."
+
+# =====================================================================================================
+# PRT · AUDITORÍA DE PORTAFOLIO CROSS-REPO  (pack portfolio — `govkit portfolio`)
+# =====================================================================================================
+- id: GOV-PRT-001
+  title: IDs de Data Product únicos en el portafolio
+  nature: D
+  category: portafolio
+  pack: portfolio
+  pillar: metadata_governance
+  severity: BLOCKER
+  technique: graph
+  enforcement: [periodic]
+  source: {doc: 06-data-product-definition.md, section: "§7", quote: "identificar de manera inequívoca el producto de datos en portafolio, catálogo y gobierno"}
+  kb: [KB_04]
+  check: {kind: plugin, name: portfolio.duplicate_ids}
+  remediation: "Asignar IDs únicos."
+
+- id: GOV-PRT-002
+  title: Productos retirados no consumidos
+  nature: D
+  category: portafolio
+  pack: portfolio
+  pillar: value_adoption
+  severity: HIGH
+  technique: graph
+  enforcement: [periodic]
+  source: {doc: 18-data-product-lifecycle.md, section: "§30", quote: "activos retirados que siguen siendo consumidos"}
+  kb: [KB_19]
+  check: {kind: plugin, name: portfolio.retired_consumed}
+  remediation: "Migrar el consumidor al producto de reemplazo."
+
+- id: GOV-PRT-003
+  title: Referencias a Data Products existentes
+  nature: D
+  category: portafolio
+  pack: portfolio
+  pillar: data_contract
+  severity: MEDIUM
+  technique: graph
+  enforcement: [periodic]
+  source: {doc: 06-data-product-definition.md, section: "§24 (Bloque 18)"}
+  kb: [KB_05]
+  check: {kind: plugin, name: portfolio.dangling_refs}
+  remediation: "Corregir data_product_ref o registrar el producto referenciado."
+
+- id: GOV-PRT-004
+  title: DP de consumo alimentados por maestros
+  nature: D
+  category: portafolio
+  pack: portfolio
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [periodic]
+  source: {doc: 14-data-consumption-exploitation-framework.md, section: "§8.2"}
+  kb: [KB_13]
+  check: {kind: plugin, name: portfolio.consumo_from_master}
+  remediation: "Reapuntar el consumo a un Data Product maestro certificado."
+
+- id: GOV-PRT-005
+  title: Una métrica, una definición (portafolio)
+  nature: D
+  category: portafolio
+  pack: portfolio
+  pillar: semantic_readiness
+  severity: BLOCKER
+  technique: graph
+  enforcement: [periodic]
+  source: {doc: 11-semantic-layer-framework.md, section: "§30"}
+  kb: [KB_12]
+  check: {kind: plugin, name: portfolio.metric_collisions}
+  remediation: "Consolidar la métrica en la Semantic Layer corporativa."
+
+- id: GOV-PRT-006
+  title: Solapamiento de productos (candidatos a consolidación)
+  nature: D
+  category: portafolio
+  pack: portfolio
+  pillar: value_adoption
+  severity: MEDIUM
+  technique: graph
+  enforcement: [periodic]
+  source: {doc: 18-data-product-lifecycle.md, section: "§19", quote: "Este estado ayuda a evitar proliferación descontrolada de productos equivalentes."}
+  kb: [KB_19]
+  check: {kind: plugin, name: portfolio.overlap}
+  remediation: "Evaluar consolidación en el comité de dominio."

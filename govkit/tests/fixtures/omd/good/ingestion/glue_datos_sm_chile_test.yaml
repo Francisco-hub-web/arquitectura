@@ -1,0 +1,18 @@
+source:
+  type: glue
+  serviceName: glue-datos-sm-chile-test
+  serviceConnection:
+    config:
+      type: Glue
+      awsConfig:
+        awsRegion: us-east-1
+        assumeRoleArn: arn:aws:iam::595738433757:role/openmetadata-readonly
+        assumeRoleSessionName: omd-glue-datos-sm-chile-test
+  sourceConfig:
+    config:
+      type: DatabaseMetadata
+      schemaFilterPattern:
+        includes: ["^dlk_slv_it_people_odm$", "^dlk_gld_it_people_dwh$"]
+workflowConfig:
+  openMetadataServerConfig:
+    hostPort: https://omd-test.cencosud.com/api

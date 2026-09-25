@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cencosud.data/schemas/report.schema.json",
+  "title": "Reporte del motor determinista (govkit lint --format json)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "tool",
+    "run",
+    "target",
+    "summary",
+    "violations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "govkit"
+        },
+        "version": {
+          "type": "string"
+        },
+        "ruleset_version": {
+          "type": "string"
+        },
+        "ruleset_digest": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "ruleset_version"
+      ]
+    },
+    "run": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "duration_ms": {
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "full",
+            "diff"
+          ]
+        },
+        "base_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "packs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "profile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "started_at",
+        "duration_ms",
+        "mode"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "repo": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "data_product_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lifecycle_state": {
+          "type": "string"
+        },
+        "stage_group": {
+          "type": "string"
+        },
+        "type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "repo",
+        "lifecycle_state",
+        "stage_group"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "enum": [
+            "PASS",
+            "WARN",
+            "FAIL"
+          ]
+        },
+        "fail_on": {
+          "type": "string"
+        },
+        "counts": {
+          "type": "object"
+        },
+        "rules": {
+          "type": "object"
+        },
+        "files_scanned": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "verdict",
+        "counts"
+      ]
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/violation"
+      }
+    },
+    "waivers_applied": {
+      "type": "array"
+    },
+    "scoring": {
+      "type": "object"
+    },
+    "semantic_handoff": {
+      "type": "object"
+    }
+  },
+  "definitions": {
+    "violation": {
+      "type": "object",
+      "required": [
+        "rule_id",
+        "title",
+        "nature",
+        "severity",
+        "message",
+        "location",
+        "remediation",
+        "fingerprint"
+      ],
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "pattern": "^GOV-[A-Z]{3}-\\d{3}$"
+        },
+        "nature": {
+          "enum": [
+            "D",
+            "H",
+            "S",
+            "O"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "BLOCKER",
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "INFO"
+          ]
+        },
+        "base_severity": {
+          "enum": [
+            "BLOCKER",
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "INFO"
+          ]
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string"
+            },
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "column": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "json_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "file",
+            "line"
+          ]
+        },
+        "remediation": {
+          "type": "object",
+          "properties": {
+            "summary": {
+              "type": "string"
+            },
+            "autofixable": {
+              "type": "boolean"
+            },
+            "fix": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "summary"
+          ]
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        }
+      }
+    }
+  }
+}

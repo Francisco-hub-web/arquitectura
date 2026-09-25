@@ -1,0 +1,29 @@
+version: 2
+semantic_models:
+  - name: sales_line
+    model: ref('fact_sales_line')
+    defaults: {agg_time_dimension: business_date}
+    entities:
+      - {name: sales_line, type: primary, expr: "ticket_id || '-' || cast(line_number as varchar)"}
+    dimensions:
+      - {name: business_date, type: time, type_params: {time_granularity: day}}
+      - {name: sales_channel_id, type: categorical}
+    measures:
+      - {name: units_sum, agg: sum, expr: units}
+metrics:
+  - name: unidades_vendidas
+    label: Unidades vendidas
+    description: "Suma de unidades vendidas por línea de ticket; las devoluciones restan."
+    type: simple
+    type_params: {measure: units_sum}
+    meta:
+      owner: ana.perez@cencosud.com
+      glossary_term: linea_de_ticket
+      unit: unidades
+      granularity: linea_de_ticket
+      aggregation: sum
+      source_data_product: DP-SAL-TRANSACTIONS-CL-001
+      source_fields: [units]
+      filters: "incluye devoluciones como negativos"
+      sensitivity: interno
+      tier: dominio

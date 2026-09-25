@@ -1,0 +1,12 @@
+kind: OpenMetadataMapping
+status: active
+entity:
+  type: dataProduct
+  name: sales-transactions
+  owner: ana.perez@cencosud.com
+  domain: sales
+  description: "Líneas de venta POS y e-commerce Chile, hecho diario por línea de ticket (ver ficha)."
+  tags: [sales, gold, confidential]
+  assets:
+    - glue-cl-prod.dlk_gld_cl_sal_transactions.fact_sales_line
+    - glue-cl-prod.dlk_gld_cl_sal_transactions.dim_sales_channel

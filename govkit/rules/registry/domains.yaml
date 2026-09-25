@@ -1,0 +1,78 @@
+# Registro de dominios canónicos (01 §7, 02 §9, 02.1 §10/§13/§15, 08 §14).
+# Los límites de dominio los define y mantiene el Data Council corporativo (01 §7).
+# status: propuesta — la tabla 02.1 §13 está marcada "Revisar más adelante"; los `code` de 3 letras
+# se infieren del lineamiento IAM (ej. `cus` en cencosud-pe-dlk-brz-cus-*) y deben validarse.
+version: "2026.09"
+status: propuesta
+domains:
+  customer:
+    code: cus
+    owner_area: "CRM / Marketing / Loyalty"
+    subdomains: [profile, identity, segmentation, loyalty, interaction, master]
+    quality_gates_mandatory: true
+  sales:
+    code: sal
+    owner_area: "Comercial / Operaciones / Ecommerce"
+    subdomains: [transactions, orders, returns, ecommerce]
+    quality_gates_mandatory: false
+  product:
+    code: pdt
+    owner_area: "Comercial / Category Management"
+    subdomains: [master, category, assortment, lifecycle, catalog]
+    quality_gates_mandatory: false
+  pricing:
+    code: prc
+    owner_area: "Pricing / Comercial"
+    subdomains: [price_management, promotions, markdown, elasticity]
+    quality_gates_mandatory: true
+  supply_chain:
+    code: sup
+    owner_area: "Supply / Logística / Operaciones"
+    subdomains: [forecast, planning, replenishment, fulfillment, allocation]
+    quality_gates_mandatory: true
+  inventory:
+    code: inv
+    owner_area: "Supply / Logística / Operaciones"
+    subdomains: [inventory_management, store_inventory, availability]
+    quality_gates_mandatory: true
+  marketing:
+    code: mkt
+    owner_area: "Marketing / Retail Media"
+    subdomains: [campaigns, personalization, audiences, retail_media]
+    quality_gates_mandatory: false
+  finance:
+    code: fin
+    owner_area: "Finanzas"
+    subdomains: [revenue, cost, profitability, reporting]
+    quality_gates_mandatory: true
+  store_operations:
+    code: sto
+    owner_area: "Operaciones Tienda"
+    subdomains: [store_performance, workforce, backoffice]
+    quality_gates_mandatory: false
+  operations:
+    code: ope
+    owner_area: "Operaciones"
+    subdomains: [processes, service]
+    quality_gates_mandatory: false
+  people:
+    code: ppl
+    owner_area: "Personas / RRHH"
+    subdomains: [workforce, payroll, talent]
+    quality_gates_mandatory: false
+  analytics:
+    code: ana
+    owner_area: "Data & Analytics corporativo con sponsors funcionales"
+    subdomains: [executive_metrics, functional_analytics, corporate_metrics]
+    quality_gates_mandatory: true   # KPIs ejecutivos (08 §14 "decisiones ejecutivas")
+# Nombres de dominio orientados a tecnología o sistema origen: prohibidos (01 §7, 02.1 §19).
+forbidden_names: [big_data, bigdata, integraciones, integration, integrations, sap, oracle, legacy, staging,
+                  raw, etl, datalake, data_lake, lakehouse, tmp, temp, misc, general, common, shared, redshift,
+                  glue, s3, kafka, api, sistemas, tecnologia]
+# Códigos de tipo en el nombre de repo (Estructura de Repositorio). Ver hallazgo H-05 (txd no es un tipo de 06).
+repo_type_codes:
+  txd: "transaccional (operacional/maestro)"
+  anl: "analítico"
+countries: [cl, pe, co, br, ar, uy, reg]
+zones: {brz: bronze, slv: silver, gld: gold, smt: semantic}
+envs: [dev, stg, qa, prd]

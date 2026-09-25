@@ -1,0 +1,12 @@
+# Despliegue por ambiente (Estructura de Repositorio · Branches y Ambientes). Ver ADR-006 (trunk vs env-branches).
+name: deploy
+on:
+  push:
+    branches: [main, staging, develop]
+    paths: ["src/**", "modeling/**", "pipelines/**", "infra/**", "metadata/**", "contracts/**"]
+jobs:
+  deploy:
+    uses: cencosud-data-global/base-workflows/.github/workflows/data-product-deploy.yml@v1
+    with:
+      environment: ${{ github.ref_name == 'main' && 'prod' || github.ref_name == 'staging' && 'staging' || 'dev' }}
+    secrets: inherit

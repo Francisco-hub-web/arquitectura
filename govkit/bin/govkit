@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# govkit — lanzador (compatible con bash 3.2 de macOS)
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in /*) ;; *) SOURCE="$DIR/$SOURCE" ;; esac
+done
+KIT_HOME="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+PY="${GOVKIT_PYTHON:-}"
+if [ -z "$PY" ] && [ -f "$KIT_HOME/.python" ]; then PY="$(cat "$KIT_HOME/.python")"; fi
+if [ -z "$PY" ] || ! command -v "$PY" >/dev/null 2>&1; then PY="$(command -v python3)"; fi
+if [ -z "$PY" ]; then echo "govkit: se requiere python3 (>= 3.9)" >&2; exit 2; fi
+export PYTHONPATH="$KIT_HOME/lib${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PY" -m govkit "$@"

@@ -1,0 +1,147 @@
+{
+  "PolicyName": "cencosud-policy-sales-transactions-anl-dp-cl-infra",
+  "Tags": [
+    {
+      "Key": "ceco",
+      "Value": "CGO2005678"
+    },
+    {
+      "Key": "ambiente",
+      "Value": "dev"
+    },
+    {
+      "Key": "pais",
+      "Value": "cl"
+    },
+    {
+      "Key": "unidad-negocio",
+      "Value": "retail"
+    },
+    {
+      "Key": "bandera",
+      "Value": "jumbo"
+    },
+    {
+      "Key": "propietario",
+      "Value": "ana.perez@cencosud.com"
+    },
+    {
+      "Key": "creado-por",
+      "Value": "ana.perez@cencosud.com"
+    },
+    {
+      "Key": "aplicacion",
+      "Value": "glue"
+    },
+    {
+      "Key": "plataforma",
+      "Value": "Glue"
+    },
+    {
+      "Key": "proyecto",
+      "Value": "sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "nombre",
+      "Value": "cencosud-role-sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "Name",
+      "Value": "sales-transactions"
+    },
+    {
+      "Key": "cuenta",
+      "Value": "931122829065"
+    },
+    {
+      "Key": "repo",
+      "Value": "https://github.com/cencosud-data-cl/sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "tf-pipeline",
+      "Value": "yes"
+    },
+    {
+      "Key": "tf-module",
+      "Value": "iam-data-product"
+    },
+    {
+      "Key": "by",
+      "Value": "terraform"
+    },
+    {
+      "Key": "pep",
+      "Value": "CG-AB-2026-SL"
+    },
+    {
+      "Key": "apl",
+      "Value": "APL0457"
+    }
+  ],
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "LogsWrite",
+        "Effect": "Allow",
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:PutRetentionPolicy"
+        ],
+        "Resource": [
+          "arn:aws:logs:*:*:log-group:/aws/glue/sales-transactions-anl-dp-cl-*:*"
+        ]
+      },
+      {
+        "Sid": "SecretsManagerRead",
+        "Effect": "Allow",
+        "Action": [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ],
+        "Resource": [
+          "arn:aws:secretsmanager:*:*:secret:sales-transactions-anl-dp-cl/*"
+        ]
+      },
+      {
+        "Sid": "EC2NetworkDescribe",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeVpcs"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "EC2NetworkInterfaceWrite",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface",
+          "ec2:ModifyNetworkInterfaceAttribute"
+        ],
+        "Resource": [
+          "arn:aws:ec2:*:*:network-interface/*"
+        ]
+      },
+      {
+        "Sid": "ECRRepositoryRead",
+        "Effect": "Allow",
+        "Action": [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchCheckLayerAvailability"
+        ],
+        "Resource": [
+          "arn:aws:ecr:*:*:repository/sales-transactions-anl-dp-cl*"
+        ]
+      }
+    ]
+  }
+}

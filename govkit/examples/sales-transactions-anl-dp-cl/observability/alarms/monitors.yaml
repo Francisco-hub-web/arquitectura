@@ -1,0 +1,21 @@
+kind: Monitors
+spec:
+  health_indicators:
+    - {name: freshness_gold, target: "antes de 07:00"}
+    - {name: reglas_criticas_verdes, target: "100%"}
+    - {name: volumen_en_rango, target: "±20% vs media móvil 28 días"}
+  monitors:
+    - {name: freshness_fact_sales_line, signal: freshness, target: gold.fact_sales_line, threshold: "07:00", severity: critico,
+       owner: diego.silva@cencosud.com, channel: "#dp-sales-transactions-cl", runbook: docs/engineering/runbook.md}
+    - {name: volumen_diario, signal: volume, target: gold.fact_sales_line, threshold: "±20%", severity: alto,
+       owner: diego.silva@cencosud.com, channel: "#dp-sales-transactions-cl", runbook: docs/engineering/runbook.md}
+    - {name: schema_drift_pos, signal: schema, target: bronze.pos_transactions, threshold: "0 cambios no contratados", severity: alto,
+       owner: diego.silva@cencosud.com, channel: "#dp-sales-transactions-cl", runbook: docs/engineering/runbook.md}
+    - {name: reglas_criticas, signal: quality, target: quality/expectations/sales_transactions.yaml, threshold: "100%", severity: critico,
+       owner: carla.rojas@cencosud.com, channel: "#dp-sales-transactions-cl", runbook: docs/engineering/runbook.md}
+    - {name: impacto_downstream, signal: lineage, target: semantic_layer_comercial, threshold: "0 consumidores afectados sin aviso", severity: medio,
+       owner: jorge.munoz@cencosud.com, channel: "#dp-sales-transactions-cl"}
+    - {name: uso_semantic_layer, signal: usage, target: semantic_layer_comercial, threshold: "≥ 1 consulta / día hábil", severity: bajo,
+       owner: ana.perez@cencosud.com, channel: "#dp-sales-transactions-cl"}
+    - {name: extraccion_anomala, signal: security, target: gold.fact_sales_line, threshold: "> 5M filas por usuario/día", severity: alto,
+       owner: seguridad.datos@cencosud.com, channel: "#seguridad-datos", runbook: docs/engineering/runbook.md}

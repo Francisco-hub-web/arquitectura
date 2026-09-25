@@ -1,0 +1,4 @@
+[{"sales_channel_id": "TDA", "sales_channel_name": "Tienda física", "is_digital": false},
+ {"sales_channel_id": "ECO", "sales_channel_name": "E-commerce web", "is_digital": true},
+ {"sales_channel_id": "APP", "sales_channel_name": "App móvil", "is_digital": true},
+ {"sales_channel_id": "MKP", "sales_channel_name": "Marketplace", "is_digital": true}]

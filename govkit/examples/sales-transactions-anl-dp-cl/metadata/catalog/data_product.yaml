@@ -1,0 +1,112 @@
+# Ficha del Data Product — EJEMPLO DE REFERENCIA (datos ficticios)
+apiVersion: cencosud.data/v1
+kind: DataProduct
+metadata:
+  id: DP-SAL-TRANSACTIONS-CL-001
+  name: sales-transactions
+  display_name: Sales Transactions Chile
+  version: 1.0.0
+  description: >-
+    Líneas de venta de tickets POS y e-commerce de Chile, curadas y conformadas a ARTS (Silver) y publicadas
+    como hecho diario por línea de ticket (Gold). Habilita el seguimiento diario de ventas por canal, tienda y
+    producto. Excluye transacciones de prueba y anulaciones posteriores a 30 días (se tratan como devoluciones).
+  created: 2026-06-02
+  updated: 2026-09-20
+spec:
+  domain: sales
+  subdomain: transactions
+  type: analytical
+  role: maestro
+  scope:
+    countries: [cl]
+    business_units: [supermercados, tiendas_por_departamento]
+    functional_scope: "Ventas POS y e-commerce Chile, granularidad línea de ticket"
+  lifecycle:
+    state: listo_para_produccion
+    target_level: industrializado
+    phase_owners:
+      generacion: "POS Retail Chile (Operaciones Tienda)"
+      ingestion: "Data Engineering Chile"
+      transformacion: "Data Engineering Chile"
+      serving: "Plataforma de Datos Chile"
+      consumo: "Comercial Chile / BI"
+      obsolescencia: "Data Owner Sales"
+  criticality: alta
+  business:
+    capability: "Store Check Out"
+    subcapability: "Customer Orders"
+    use_cases: [UC-SAL-001]
+    problem: "Las áreas comerciales calculan ventas diarias con extracciones distintas y cifras que no cuadran entre sí."
+    decision_enabled: "Seguimiento diario de venta por canal, tienda y producto para ajustar surtido y promociones."
+    kpis: [venta_neta, unidades_vendidas]
+    value_types: [productividad, margen]
+    value_hypothesis: "Reducir en 80% el tiempo de cuadratura diaria y habilitar decisiones comerciales antes de las 09:00."
+    strategic_objective: "Una sola versión de la verdad de ventas para BI y AI"
+  ownership:
+    business_owner: ana.perez@cencosud.com
+    data_owner: jorge.munoz@cencosud.com
+    data_steward: carla.rojas@cencosud.com
+    technical_owner: diego.silva@cencosud.com
+    architect: paula.vera@cencosud.com
+    bi_lead: rodrigo.lagos@cencosud.com
+  consumers:
+    - {name: "Semantic Layer Comercial Chile", team: "BI Comercial CL", channel: semantic_layer, status: validado}
+    - {name: "Promotion Effectiveness", team: "Pricing CL", channel: data_product_contract, status: potencial}
+  inputs:
+    - {name: pos_transactions, source_system: "POS Xstore", source_domain: sales, type: cdc, frequency: horaria,
+       owner: operaciones.pos@cencosud.com, critical: true, contract: contracts/input/pos_transactions.yaml}
+    - {name: product_master, source_system: "Product Master DP", source_domain: product, type: data_product,
+       frequency: diaria, owner: catalogo.producto@cencosud.com, critical: true,
+       data_product_ref: DP-PDT-MASTER-CL-001, contract_version: 2.1.0, contract: contracts/input/product_master.yaml}
+  outputs:
+    - {name: fact_sales_line, type: semantic_dataset, consumer: "Semantic Layer Comercial Chile", channel: semantic_layer,
+       frequency: diaria, sla: "07:00 America/Santiago", contract: contracts/output/sales_line_daily.yaml}
+  modeling:
+    layers: [bronze, silver, gold, semantic]
+    arts_alignment: extension
+    table_format: iceberg
+    grain: "línea de ticket"
+  classification:
+    level: confidencial
+    pii: false
+    financial: true
+    third_party_exposure: false
+    masking_required: false
+    special_retention: false
+  access:
+    model: rbac
+    level: restringido_dominio
+    rls: true
+  privacy:
+    pia: {status: completado, date: 2026-08-14, reference: PIA-CL-2026-0112}
+  sla:
+    frequency: diaria
+    freshness: PT24H
+    availability: "99.5%"
+    publication_window: "06:00-07:00 America/Santiago"
+  quality_slos:
+    - {dimension: completitud, target: "100%"}
+    - {dimension: unicidad, target: "< 0.1%"}
+    - {dimension: freshness, target: "07:00"}
+  retention:
+    policy: "Política corporativa de retención de datos transaccionales CL (7 años)"
+    period: P7Y
+    archive: "Gold > 24 meses a almacenamiento frío (S3 Glacier Instant Retrieval)"
+    deletion: "Eliminación física al cumplir 7 años vía job de lifecycle auditado"
+    deprecation: "Aviso de 90 días a consumidores registrados"
+  cost:
+    monitoring: true
+    owner: diego.silva@cencosud.com
+    cost_center: CGO2005678
+  adoption:
+    metrics: [usuarios_activos_mensuales, consultas_semanales_semantic_layer]
+  glossary_terms: [linea_de_ticket, venta_neta, canal_de_venta]
+  tags: [sales, gold, confidential, shared, bi]
+  lineage:
+    expected: [pos_xstore, ingestion_cdc, bronze, silver, gold, semantic, semantic_layer_comercial]
+  semantic:
+    exposes_metrics: [unidades_vendidas, venta_neta]
+    dimensions: [tiempo, canal_de_venta, tienda, producto]
+    semantic_layer: "dbt semantic layer (MetricFlow)"
+  dependencies:
+    - {data_product: DP-PDT-MASTER-CL-001, reason: "jerarquía de producto"}

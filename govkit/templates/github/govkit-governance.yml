@@ -1,0 +1,54 @@
+# Reusable workflow para el repo central `cencosud-data-global/base-workflows`
+# (.github/workflows/govkit-governance.yml). Cada repo de Data Product lo invoca desde su pr.yml:
+#
+#   jobs:
+#     governance:
+#       uses: cencosud-data-global/base-workflows/.github/workflows/govkit-governance.yml@v1
+#       with: {ruleset: "2026.09.1"}
+#
+# Punto de control PR: motor determinista (bloqueante) + SARIF en Code Scanning + resumen en el PR.
+# La revisión semántica (LLM local) NO corre en CI por diseño: es consultiva y local (sin egreso de datos).
+name: govkit-governance
+on:
+  workflow_call:
+    inputs:
+      ruleset:
+        description: "Versión del kit (tag del release del repo de arquitectura)"
+        type: string
+        default: "v1"
+      fail_on:
+        type: string
+        default: "BLOCKER"
+      stage:
+        description: "Forzar estado (vacío = el declarado en la ficha)"
+        type: string
+        default: ""
+jobs:
+  govkit:
+    runs-on: ubuntu-latest
+    permissions: {contents: read, security-events: write, pull-requests: read}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: Obtener govkit ${{ inputs.ruleset }}
+        run: |
+          curl -sSfL "https://github.com/cencosud-data-global/arquitectura/releases/download/${{ inputs.ruleset }}/govkit-${{ inputs.ruleset }}.tar.gz" \
+            | tar xz -C "$RUNNER_TEMP"
+      - name: Motor determinista (lint + gate del estado declarado)
+        run: |
+          STAGE_ARG=""; [ -n "${{ inputs.stage }}" ] && STAGE_ARG="--stage ${{ inputs.stage }}"
+          "$RUNNER_TEMP/govkit/bin/govkit" lint . $STAGE_ARG \
+            --base "origin/${{ github.base_ref || 'main' }}" \
+            --fail-on "${{ inputs.fail_on }}" \
+            --format sarif -o govkit.sarif --gh-summary
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: {sarif_file: govkit.sarif, category: govkit}
+      - name: Reporte JSON (artefacto para catálogo/scoring)
+        if: always()
+        run: "$RUNNER_TEMP/govkit/bin/govkit lint . --format json -o govkit-report.json || true"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: govkit-report, path: govkit-report.json}

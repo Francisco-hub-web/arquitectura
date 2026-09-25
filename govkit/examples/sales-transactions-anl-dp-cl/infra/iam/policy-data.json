@@ -1,0 +1,192 @@
+{
+  "PolicyName": "cencosud-policy-sales-transactions-anl-dp-cl-data",
+  "Tags": [
+    {
+      "Key": "ceco",
+      "Value": "CGO2005678"
+    },
+    {
+      "Key": "ambiente",
+      "Value": "dev"
+    },
+    {
+      "Key": "pais",
+      "Value": "cl"
+    },
+    {
+      "Key": "unidad-negocio",
+      "Value": "retail"
+    },
+    {
+      "Key": "bandera",
+      "Value": "jumbo"
+    },
+    {
+      "Key": "propietario",
+      "Value": "ana.perez@cencosud.com"
+    },
+    {
+      "Key": "creado-por",
+      "Value": "ana.perez@cencosud.com"
+    },
+    {
+      "Key": "aplicacion",
+      "Value": "glue"
+    },
+    {
+      "Key": "plataforma",
+      "Value": "Glue"
+    },
+    {
+      "Key": "proyecto",
+      "Value": "sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "nombre",
+      "Value": "cencosud-role-sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "Name",
+      "Value": "sales-transactions"
+    },
+    {
+      "Key": "cuenta",
+      "Value": "931122829065"
+    },
+    {
+      "Key": "repo",
+      "Value": "https://github.com/cencosud-data-cl/sales-transactions-anl-dp-cl"
+    },
+    {
+      "Key": "tf-pipeline",
+      "Value": "yes"
+    },
+    {
+      "Key": "tf-module",
+      "Value": "iam-data-product"
+    },
+    {
+      "Key": "by",
+      "Value": "terraform"
+    },
+    {
+      "Key": "pep",
+      "Value": "CG-AB-2026-SL"
+    },
+    {
+      "Key": "apl",
+      "Value": "APL0457"
+    }
+  ],
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "S3DataLakeRead",
+        "Effect": "Allow",
+        "Action": [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:GetBucketVersioning"
+        ],
+        "Resource": [
+          "arn:aws:s3:::cencosud-cl-dlk-brz-sal-*",
+          "arn:aws:s3:::cencosud-cl-dlk-slv-sal-*",
+          "arn:aws:s3:::cencosud-cl-dlk-gld-sal-*",
+          "arn:aws:s3:::cencosud-cl-dlk-smt-sal-*",
+          "arn:aws:s3:::cencosud-cl-dlk-brz-sal-*/*",
+          "arn:aws:s3:::cencosud-cl-dlk-slv-sal-*/*",
+          "arn:aws:s3:::cencosud-cl-dlk-gld-sal-*/*",
+          "arn:aws:s3:::cencosud-cl-dlk-smt-sal-*/*"
+        ]
+      },
+      {
+        "Sid": "S3DataLakeWrite",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ],
+        "Resource": [
+          "arn:aws:s3:::cencosud-cl-dlk-brz-sal-*/*",
+          "arn:aws:s3:::cencosud-cl-dlk-slv-sal-*/*",
+          "arn:aws:s3:::cencosud-cl-dlk-gld-sal-*/*",
+          "arn:aws:s3:::cencosud-cl-dlk-smt-sal-*/*"
+        ]
+      },
+      {
+        "Sid": "S3ListBuckets",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListAllMyBuckets"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "GlueCatalogRead",
+        "Effect": "Allow",
+        "Action": [
+          "glue:GetTable",
+          "glue:GetTables",
+          "glue:GetDatabase",
+          "glue:GetDatabases",
+          "glue:GetPartition",
+          "glue:GetPartitions",
+          "glue:SearchTables"
+        ],
+        "Resource": [
+          "arn:aws:glue:us-east-1:*:catalog",
+          "arn:aws:glue:us-east-1:*:database/dlk_*_cl_sal_*",
+          "arn:aws:glue:us-east-1:*:table/dlk_*_cl_sal_*/*"
+        ]
+      },
+      {
+        "Sid": "GlueCatalogWrite",
+        "Effect": "Allow",
+        "Action": [
+          "glue:CreateTable",
+          "glue:CreatePartition",
+          "glue:BatchCreatePartition",
+          "glue:UpdateTable",
+          "glue:DeleteTable"
+        ],
+        "Resource": [
+          "arn:aws:glue:us-east-1:*:catalog",
+          "arn:aws:glue:us-east-1:*:database/dlk_*_cl_sal_*",
+          "arn:aws:glue:us-east-1:*:table/dlk_*_cl_sal_*/*"
+        ]
+      },
+      {
+        "Sid": "KMSEncryption",
+        "Effect": "Allow",
+        "Action": [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*"
+        ],
+        "Resource": [
+          "arn:aws:kms:us-east-1:931122829065:key/7f3c2a1e-5b8d-4c6f-9a0e-2d1b3c4e5f60"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "kms:ViaService": "s3.us-east-1.amazonaws.com"
+          }
+        }
+      },
+      {
+        "Sid": "AthenaQuery",
+        "Effect": "Allow",
+        "Action": [
+          "athena:StartQueryExecution",
+          "athena:GetQueryExecution",
+          "athena:GetQueryResults"
+        ],
+        "Resource": "arn:aws:athena:us-east-1:*:workgroup/sales-transactions-anl-dp-cl"
+      }
+    ]
+  }
+}

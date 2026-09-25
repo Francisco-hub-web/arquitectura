@@ -1,0 +1,13 @@
+# Métricas corporativas gobernadas centralmente (11 §14.1, §20; 14 §12.2).
+# "Se gobierna centralmente y no puede ser modificada por un dominio, proyecto o Data Product Analítico
+#  de forma unilateral" (14 §12.2). owner_repos: repos habilitados para definirlas (pendiente de designar).
+version: "2026.09"
+owner_repos: []
+metrics:
+  venta_neta:            {label: "Ventas Netas", aliases: [ventas_netas, net_sales]}
+  margen:                {label: "Margen", aliases: [margen_comercial, gross_margin, margin]}
+  ebitda_analitico:      {label: "EBITDA analítico", aliases: [ebitda]}
+  venta_comparable_lfl:  {label: "Venta Comparable (LFL)", aliases: [lfl, like_for_like, venta_comparable]}
+  ticket_promedio:       {label: "Ticket promedio", aliases: [average_ticket, ticket_medio]}
+  fill_rate:             {label: "Fill rate", aliases: []}
+  clientes_activos:      {label: "Clientes activos", aliases: [active_customers, cliente_activo]}

@@ -1,0 +1,24 @@
+[
+  {
+    "name": "openmetadata-readonly",
+    "accountId": 595738433757,
+    "trustRelationshipPolicy": {
+      "Version": "2012-10-17",
+      "Statement": [{"Sid": "AllowOMDPodAssumeRole", "Effect": "Allow",
+                     "Principal": {"AWS": "arn:aws:iam::970641057631:role/cct-plataforma-pod-omdata"},
+                     "Action": ["sts:AssumeRole", "sts:TagSession"]}]
+    },
+    "policies": ["2057-omdata-policy-test"]
+  },
+  {
+    "name": "openmetadata-readonly",
+    "accountId": 525143576690,
+    "trustRelationshipPolicy": {
+      "Version": "2012-10-17",
+      "Statement": [{"Sid": "AllowOMDPodAssumeRole", "Effect": "Allow",
+                     "Principal": {"AWS": "arn:aws:iam::463953283464:role/cct-plataforma-pod-omdata"},
+                     "Action": ["sts:AssumeRole", "sts:TagSession"]}]
+    },
+    "policies": ["2057-omdata-policy-prod"]
+  }
+]

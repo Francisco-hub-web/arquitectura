@@ -1,0 +1,4 @@
+metrics:
+  - name: unidades_vendidas
+    type: simple
+    type_params: {measure: units_sum}

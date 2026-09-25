@@ -1,0 +1,6 @@
+// Modelo lógico/físico — %%repo%% (docs/dbdiagram)
+// <COMPLETAR>
+Project %%subdomain_snake%% {
+  database_type: 'Iceberg'
+  Note: '%%dp_id%%'
+}

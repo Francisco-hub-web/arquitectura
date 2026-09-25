@@ -1,0 +1,106 @@
+{
+  "RoleName": "cencosud-role-%%repo%%",
+  "AssumeRolePolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": [
+            "glue.amazonaws.com",
+            "lakeformation.amazonaws.com"
+          ]
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  },
+  "Policies": [
+    {
+      "PolicyName": "cencosud-policy-%%repo%%-data",
+      "PolicyFile": "policy-data.json"
+    },
+    {
+      "PolicyName": "cencosud-policy-%%repo%%-infra",
+      "PolicyFile": "policy-infra.json"
+    }
+  ],
+  "Tags": [
+    {
+      "Key": "ceco",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "ambiente",
+      "Value": "dev"
+    },
+    {
+      "Key": "pais",
+      "Value": "%%country%%"
+    },
+    {
+      "Key": "unidad-negocio",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "bandera",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "propietario",
+      "Value": "%%owner_email%%"
+    },
+    {
+      "Key": "creado-por",
+      "Value": "%%owner_email%%"
+    },
+    {
+      "Key": "aplicacion",
+      "Value": "glue"
+    },
+    {
+      "Key": "plataforma",
+      "Value": "Glue"
+    },
+    {
+      "Key": "proyecto",
+      "Value": "%%repo%%"
+    },
+    {
+      "Key": "nombre",
+      "Value": "cencosud-role-%%repo%%"
+    },
+    {
+      "Key": "Name",
+      "Value": "%%dp_name%%"
+    },
+    {
+      "Key": "cuenta",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "repo",
+      "Value": "https://github.com/cencosud-data-%%country%%/%%repo%%"
+    },
+    {
+      "Key": "tf-pipeline",
+      "Value": "yes"
+    },
+    {
+      "Key": "tf-module",
+      "Value": "iam-data-product"
+    },
+    {
+      "Key": "by",
+      "Value": "terraform"
+    },
+    {
+      "Key": "pep",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "apl",
+      "Value": "<COMPLETAR>"
+    }
+  ]
+}

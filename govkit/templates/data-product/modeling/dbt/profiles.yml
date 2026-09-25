@@ -1,0 +1,12 @@
+%%subdomain_snake%%:
+  target: dev
+  outputs:
+    dev:
+      type: glue
+      role_arn: "{{ env_var('DBT_GLUE_ROLE_ARN') }}"
+      region: us-east-1
+      schema: dlk_slv_%%country%%_%%domain_code%%_%%subdomain_snake%%
+      datalake_formats: iceberg
+      location: "{{ env_var('DBT_GLUE_LOCATION') }}"
+      workers: 2
+      worker_type: G.1X

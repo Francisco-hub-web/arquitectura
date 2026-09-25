@@ -1,0 +1,10 @@
+# Revisión obligatoria por carpeta (lineamiento Estructura de Repositorio · CODEOWNERS)
+*                @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders
+/contracts/      @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders
+/modeling/       @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders
+/quality/        @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders
+/tests/          @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders
+/pipelines/      @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders
+/src/            @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders
+/docs/           @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders
+/.github/        @cencosud-data-%%country%%/data-architects @cencosud-data-%%country%%/tech-leaders

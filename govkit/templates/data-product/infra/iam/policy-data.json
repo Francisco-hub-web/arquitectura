@@ -1,0 +1,192 @@
+{
+  "PolicyName": "cencosud-policy-%%repo%%-data",
+  "Tags": [
+    {
+      "Key": "ceco",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "ambiente",
+      "Value": "dev"
+    },
+    {
+      "Key": "pais",
+      "Value": "%%country%%"
+    },
+    {
+      "Key": "unidad-negocio",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "bandera",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "propietario",
+      "Value": "%%owner_email%%"
+    },
+    {
+      "Key": "creado-por",
+      "Value": "%%owner_email%%"
+    },
+    {
+      "Key": "aplicacion",
+      "Value": "glue"
+    },
+    {
+      "Key": "plataforma",
+      "Value": "Glue"
+    },
+    {
+      "Key": "proyecto",
+      "Value": "%%repo%%"
+    },
+    {
+      "Key": "nombre",
+      "Value": "cencosud-role-%%repo%%"
+    },
+    {
+      "Key": "Name",
+      "Value": "%%dp_name%%"
+    },
+    {
+      "Key": "cuenta",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "repo",
+      "Value": "https://github.com/cencosud-data-%%country%%/%%repo%%"
+    },
+    {
+      "Key": "tf-pipeline",
+      "Value": "yes"
+    },
+    {
+      "Key": "tf-module",
+      "Value": "iam-data-product"
+    },
+    {
+      "Key": "by",
+      "Value": "terraform"
+    },
+    {
+      "Key": "pep",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "apl",
+      "Value": "<COMPLETAR>"
+    }
+  ],
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "S3DataLakeRead",
+        "Effect": "Allow",
+        "Action": [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:GetBucketVersioning"
+        ],
+        "Resource": [
+          "arn:aws:s3:::cencosud-%%country%%-dlk-brz-%%domain_code%%-*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-slv-%%domain_code%%-*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-gld-%%domain_code%%-*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-smt-%%domain_code%%-*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-brz-%%domain_code%%-*/*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-slv-%%domain_code%%-*/*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-gld-%%domain_code%%-*/*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-smt-%%domain_code%%-*/*"
+        ]
+      },
+      {
+        "Sid": "S3DataLakeWrite",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ],
+        "Resource": [
+          "arn:aws:s3:::cencosud-%%country%%-dlk-brz-%%domain_code%%-*/*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-slv-%%domain_code%%-*/*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-gld-%%domain_code%%-*/*",
+          "arn:aws:s3:::cencosud-%%country%%-dlk-smt-%%domain_code%%-*/*"
+        ]
+      },
+      {
+        "Sid": "S3ListBuckets",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListAllMyBuckets"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "GlueCatalogRead",
+        "Effect": "Allow",
+        "Action": [
+          "glue:GetTable",
+          "glue:GetTables",
+          "glue:GetDatabase",
+          "glue:GetDatabases",
+          "glue:GetPartition",
+          "glue:GetPartitions",
+          "glue:SearchTables"
+        ],
+        "Resource": [
+          "arn:aws:glue:us-east-1:*:catalog",
+          "arn:aws:glue:us-east-1:*:database/dlk_*_%%country%%_%%domain_code%%_*",
+          "arn:aws:glue:us-east-1:*:table/dlk_*_%%country%%_%%domain_code%%_*/*"
+        ]
+      },
+      {
+        "Sid": "GlueCatalogWrite",
+        "Effect": "Allow",
+        "Action": [
+          "glue:CreateTable",
+          "glue:CreatePartition",
+          "glue:BatchCreatePartition",
+          "glue:UpdateTable",
+          "glue:DeleteTable"
+        ],
+        "Resource": [
+          "arn:aws:glue:us-east-1:*:catalog",
+          "arn:aws:glue:us-east-1:*:database/dlk_*_%%country%%_%%domain_code%%_*",
+          "arn:aws:glue:us-east-1:*:table/dlk_*_%%country%%_%%domain_code%%_*/*"
+        ]
+      },
+      {
+        "Sid": "KMSEncryption",
+        "Effect": "Allow",
+        "Action": [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*"
+        ],
+        "Resource": [
+          "arn:aws:kms:us-east-1:<COMPLETAR_ACCOUNT_ID>:key/<COMPLETAR_KEY_ID>"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "kms:ViaService": "s3.us-east-1.amazonaws.com"
+          }
+        }
+      },
+      {
+        "Sid": "AthenaQuery",
+        "Effect": "Allow",
+        "Action": [
+          "athena:StartQueryExecution",
+          "athena:GetQueryExecution",
+          "athena:GetQueryResults"
+        ],
+        "Resource": "arn:aws:athena:us-east-1:*:workgroup/%%repo%%"
+      }
+    ]
+  }
+}

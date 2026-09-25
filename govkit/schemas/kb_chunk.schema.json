@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cencosud.data/schemas/kb_chunk.schema.json",
+  "title": "Front-matter de un Mini-Contexto de la Base de Conocimiento",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "version",
+    "tier",
+    "sources",
+    "triggers",
+    "depends_on",
+    "token_budget"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^KB_\\d{2}$"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "format": "semver"
+    },
+    "status": {
+      "enum": [
+        "vigente",
+        "borrador",
+        "deprecado"
+      ]
+    },
+    "tier": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 7
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "applies_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "triggers": {
+      "type": "object",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^KB_\\d{2}$"
+      }
+    },
+    "related": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^KB_\\d{2}$"
+      }
+    },
+    "token_budget": {
+      "type": "integer",
+      "minimum": 200,
+      "maximum": 1600
+    },
+    "deterministic_rules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

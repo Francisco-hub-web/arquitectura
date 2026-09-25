@@ -1,0 +1,10 @@
+# Alternativa al hook nativo (`govkit hooks install`) para equipos que usan https://pre-commit.com
+repos:
+  - repo: local
+    hooks:
+      - id: govkit
+        name: govkit (perfil pre-commit)
+        entry: govkit lint . --profile pre-commit --fail-on BLOCKER
+        language: system
+        pass_filenames: false
+        always_run: true

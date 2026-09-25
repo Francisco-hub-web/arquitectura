@@ -1,0 +1,11 @@
+# Mapeo OpenMetadata-ready (06 §17, §28; 09 §16). Sincronizado por pipeline, no editado en la UI.
+kind: OpenMetadataMapping
+status: candidate                   # lifecycle → catálogo (18 §27)
+entity:
+  type: dataProduct
+  name: %%dp_name%%
+  owner: %%owner%%
+  domain: %%domain%%
+  description: "<COMPLETAR>"
+  tags: [%%domain%%]
+  assets: []                        # FQN de tablas/vistas publicadas (service.database.schema.table)

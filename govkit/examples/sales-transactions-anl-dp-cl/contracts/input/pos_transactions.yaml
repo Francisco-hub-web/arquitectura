@@ -1,0 +1,31 @@
+apiVersion: cencosud.data/v1
+kind: DataContract
+metadata:
+  name: pos_transactions
+  version: 1.2.0
+  data_product: DP-SAL-TRANSACTIONS-CL-001
+  domain: sales
+  owner: diego.silva@cencosud.com
+  description: "Contrato de entrada CDC desde POS Xstore: líneas de ticket emitidas por las tiendas de Chile."
+spec:
+  direction: input
+  layer: bronze
+  producer: "POS Xstore (Operaciones Tienda CL)"
+  granularity: "evento CDC por línea de ticket"
+  business_keys: [ticket_id, line_number]
+  format: [json]
+  schema:
+    - {name: ticket_id, type: string, required: true, description: "Identificador del ticket en POS", pii: false}
+    - {name: line_number, type: integer, required: true, description: "Número de línea del ticket", pii: false}
+    - {name: store_code, type: string, required: true, description: "Código de tienda POS", pii: false}
+    - {name: sku_code, type: string, required: true, description: "Código de artículo escaneado", pii: false}
+    - {name: quantity, type: decimal, required: true, description: "Cantidad vendida en la línea", pii: false}
+    - {name: gross_amount, type: decimal, required: true, description: "Monto bruto de la línea en CLP", pii: false}
+    - {name: event_ts, type: timestamp, required: true, description: "Timestamp del evento CDC (UTC)", pii: false}
+  sla: {frequency: horaria, freshness: PT1H}
+  classification: confidencial
+  compatibility: forward
+  change_policy:
+    breaking_changes: coordinated_release_with_producer
+    notice_days: 30
+    notification_channel: "#pos-xstore-cl"

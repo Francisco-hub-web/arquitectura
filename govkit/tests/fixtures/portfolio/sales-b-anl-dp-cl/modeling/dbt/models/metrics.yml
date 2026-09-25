@@ -1,0 +1,4 @@
+metrics:
+  - name: Unidades Vendidas
+    type: simple
+    type_params: {measure: units_net_sum}

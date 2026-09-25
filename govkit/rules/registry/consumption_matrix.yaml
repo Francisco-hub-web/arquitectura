@@ -1,0 +1,49 @@
+# Patrones de Data Product Analítico de Consumo → plataformas de exposición y serving layers
+# (14-data-consumption-exploitation-framework.md §9, §10, §11, §14, §15).
+version: "2026.09"
+dimensions: [audience, objective, interaction, volume, granularity, latency, refresh_frequency,
+             concurrency, action, criticality, security, reuse]   # 14 §13 (12 dimensiones obligatorias)
+patterns:
+  bi_ejecutivo:
+    platforms: [powerbi, looker, microstrategy]
+    serving: [analitica, semantica]
+  bi_gestion:
+    platforms: [powerbi, looker]
+    serving: [analitica, semantica]
+  reporting_administrado:
+    platforms: [microstrategy, powerbi_paginated]
+    serving: [analitica]
+  regulatorio_compliance:
+    platforms: [financial_reporting_platform, microstrategy]
+    serving: [analitica]
+  self_service_gobernado:
+    platforms: [powerbi_shared_dataset, looker_explore]
+    serving: [semantica]
+    forbidden: [microstrategy]            # 14 §10.2: no para exploración ad-hoc
+  exploracion_alto_volumen:
+    platforms: [databricks_sql, athena, snowflake, bigquery, redshift, trino]
+    serving: [analitica]
+    forbidden: [powerbi, microstrategy, looker]
+  aplicacion_operacional:
+    platforms: [web_app_serving_db]
+    serving: [operacional]
+    forbidden: [powerbi, looker, microstrategy]   # 14 §15.2
+  api_consulta_operacional:
+    platforms: [rest_api, grpc_api]
+    serving: [operacional]
+    forbidden_serving_tech: [delta, parquet, iceberg, s3, object_storage]  # 14 §10.5
+  analitica_embebida:
+    platforms: [powerbi_embedded, looker_embedded, js_semantic_api]
+    serving: [semantica, analitica]
+  extraccion_distribucion_masiva:
+    platforms: [object_storage, sftp, bulk_export_api]
+    serving: [exportacion]
+    forbidden: [powerbi, powerbi_paginated, microstrategy, looker]   # 14 §9.10 "Prohibido usar Power BI o MicroStrategy"
+  activacion_reverse_etl:
+    platforms: [reverse_etl, sync_microservice]
+    serving: [activacion]
+    requires: [consent_control, execution_audit]   # 14 §10.6
+  ai_ml:
+    platforms: [feature_store, delta_lake, mlflow]
+    serving: [ml]
+serving_types: [analitica, semantica, operacional, exportacion, activacion, ml]

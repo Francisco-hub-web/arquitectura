@@ -1,0 +1,12 @@
+transactions:
+  target: dev
+  outputs:
+    dev:
+      type: glue
+      role_arn: "{{ env_var('DBT_GLUE_ROLE_ARN') }}"
+      region: us-east-1
+      schema: dlk_slv_cl_sal_transactions
+      datalake_formats: iceberg
+      location: "{{ env_var('DBT_GLUE_LOCATION') }}"
+      workers: 2
+      worker_type: G.1X

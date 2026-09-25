@@ -1,0 +1,13 @@
+kind: Glossary
+terms:
+  - term: linea_de_ticket
+    definition: "Cada ítem (SKU y cantidad) registrado dentro de un ticket de venta POS o pedido e-commerce."
+    context: "Granularidad base del Data Product"
+    owner: carla.rojas@cencosud.com
+    domain: sales
+    related: [ticket, canal_de_venta]
+  - term: canal_de_venta
+    definition: "Medio por el que se concreta la venta: tienda física, e-commerce, app o marketplace."
+    context: "Dimensión conformada del dominio Sales"
+    owner: carla.rojas@cencosud.com
+    domain: sales

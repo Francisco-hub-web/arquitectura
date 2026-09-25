@@ -1,0 +1,19 @@
+source:
+  type: dynamodb
+  serviceName: dynamo-cl-data
+  serviceConnection:
+    config:
+      type: DynamoDB
+      awsConfig:
+        awsRegion: us-east-1a
+        awsAccessKeyId: AKIAABCDEFGHIJKLMNOP
+        awsSecretAccessKey: notreallyasecretbutlongenough
+        assumeRoleArn: arn:aws:iam::280741048933:role/openmetadata-readonly
+  sourceConfig:
+    config:
+      type: DatabaseMetadata
+      schemaFilterPattern:
+        includes: ["ventas"]
+workflowConfig:
+  openMetadataServerConfig:
+    hostPort: https://omd.cencosud.com/api

@@ -1,0 +1,12 @@
+# Taxonomía controlada de tags (09-metadata-governance.md §13: "no conviene permitir proliferación caótica").
+version: "2026.09"
+groups:
+  layer: [bronze, silver, gold, semantic, serving, feature]
+  sensitivity: [public, internal, confidential, pii, regulated, financial]
+  usage: [executive, shared, ai-ready, self-service, experimental, operational, regulatory]
+  criticality: [critical, high, medium, low]
+  lifecycle: [candidate, active, in-production, evolving, deprecated, retired]
+  exposure: [bi, api, saas, reverse-etl, export, embedded, rag]
+# Los nombres de dominio, subdominio y país registrados también son tags válidos.
+include_domains: true
+include_countries: true

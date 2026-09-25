@@ -1,0 +1,31 @@
+# Cuentas AWS y aislamiento por ambiente para OpenMetadata
+# (lineamientos "OpenMetadata - Guía Rápida AWS" y "OpenMetadata - Cross-Account Role", v0.2, 2026-09-10).
+version: "2026.09"
+omd:
+  role_name: openmetadata-readonly
+  pod_role: cct-plataforma-pod-omdata
+  trust_actions: ["sts:AssumeRole", "sts:TagSession"]
+  environments:
+    test:
+      dg_corp_account: "970641057631"
+      instance_host: omd-test.cencosud.com
+      policy: 2057-omdata-policy-test
+    prod:
+      dg_corp_account: "463953283464"
+      instance_host: omd.cencosud.com
+      policy: 2057-omdata-policy-prod
+data_accounts:
+  "280741048933": {name: "Cencosud CL DATA TEST",        env: test}
+  "595738433757": {name: "Cencosud Datos SM Chile Test",  env: test}
+  "488022034671": {name: "Cencosud Corp BI New Test",     env: test}
+  "931122829065": {name: "Cencosud CL DATA PROD",         env: prod}
+  "525143576690": {name: "Cencosud Datos SM Chile Prod",  env: prod}
+  "114330847212": {name: "Cencosud Corp BI New Prod",     env: prod}
+  "970641057631": {name: "DG Corp TEST",                  env: test, role: dg_corp}
+  "463953283464": {name: "DG Corp PROD",                  env: prod, role: dg_corp}
+# Las 28 cuentas gestionadas por el repositorio access-analyzer (2.2).
+managed_accounts: ["833852461494", "416439230169", "931122829065", "280741048933", "194639116875", "803146372671",
+  "529561489360", "266556556605", "463953283464", "747556289396", "547265862249", "488022034671", "114330847212",
+  "970641057631", "595738433757", "525143576690", "320375729709", "130965375069", "608614369971", "165566312357",
+  "328257170159", "760044501119", "507948178790", "795568070636", "249327320827", "757047206147", "467294616345",
+  "931157111832"]

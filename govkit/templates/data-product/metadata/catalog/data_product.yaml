@@ -1,0 +1,83 @@
+# Ficha del Data Product — metadata as code (06-data-product-definition.md · 09 §10/§16 · 15 §18)
+# Estado inicial: en_definicion. Completar las marcas <COMPLETAR>; `govkit lint` indica qué exige cada etapa
+# y `govkit gate --to <estado>` muestra qué falta para avanzar.
+apiVersion: cencosud.data/v1
+kind: DataProduct
+metadata:
+  id: %%dp_id%%
+  name: %%dp_name%%
+  display_name: "<COMPLETAR: nombre visible>"
+  version: 0.1.0
+  description: "<COMPLETAR: qué es, qué decisión habilita, granularidad, alcance y exclusiones>"
+  created: %%today%%
+  updated: %%today%%
+spec:
+  domain: %%domain%%
+  subdomain: %%subdomain%%
+  type: %%dp_type%%                 # analytical | operational | saas_driven | ai_ml | semantic_metrics
+  role: maestro                     # maestro | consumo (14 §8.3)
+  scope:
+    countries: [%%country%%]
+    business_units: ["<COMPLETAR>"]
+  lifecycle:
+    state: en_definicion            # 18 §9: identificado → ... → retirado
+    target_level: mvp               # mvp | industrializado | estrategico
+    phase_owners:                   # 01 §2: responsable por fase
+      generacion: "<COMPLETAR>"
+      ingestion: "<COMPLETAR>"
+      transformacion: "<COMPLETAR>"
+      serving: "<COMPLETAR>"
+      consumo: "<COMPLETAR>"
+      obsolescencia: "<COMPLETAR>"
+  criticality: media                # baja | media | alta | critica
+  business:
+    capability: "<COMPLETAR: capacidad del mapa corporativo>"
+    use_cases: []                   # [UC-...]
+    problem: "<COMPLETAR>"
+    decision_enabled: "<COMPLETAR>"
+    kpis: []
+    value_types: []
+    value_hypothesis: "<COMPLETAR>"
+  ownership:
+    business_owner: %%owner%%
+    data_owner: "<COMPLETAR>"
+    data_steward: "<COMPLETAR>"
+    technical_owner: "<COMPLETAR>"
+    architect: "<COMPLETAR>"
+  consumers: []                     # [{name, team, channel, status: potencial|validado|activo}]
+  inputs: []                        # [{name, source_system, source_domain, type, frequency, owner, critical}]
+  outputs: []                       # [{name, type, consumer, channel, frequency, sla, contract}]
+  modeling:
+    layers: [bronze, silver, gold]
+    arts_alignment: alineado        # alineado | extension | modelo_propio
+    table_format: iceberg
+  classification:
+    level: interno                  # publico | interno | confidencial | sensible_pii (según regulación del país)
+    pii: false
+    financial: false
+    third_party_exposure: false
+    masking_required: false
+    special_retention: false
+  access:
+    model: rbac
+    level: restringido_dominio
+  privacy:
+    pia: {status: pendiente}
+  sla:
+    frequency: "<COMPLETAR>"
+    freshness: "<COMPLETAR: ISO-8601, p.ej. PT24H>"
+    availability: "<COMPLETAR: p.ej. 99.5%>"
+  quality_slos: []
+  retention:
+    policy: "<COMPLETAR: política corporativa aplicable>"
+    deletion: "<COMPLETAR>"
+  cost:
+    monitoring: false
+    owner: "<COMPLETAR>"
+  adoption:
+    metrics: []
+  glossary_terms: []
+  tags: [%%domain%%]
+  lineage:
+    expected: []                    # [fuente, ingestion, bronze, silver, gold, semantic, consumidor]
+  dependencies: []

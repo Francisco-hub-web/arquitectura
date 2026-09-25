@@ -1,0 +1,43 @@
+# Mapa de Capacidades de Negocio (02.1). Pendiente de acuerdo con las áreas de negocio (12 §11, nota).
+# Mientras `status: pendiente`, la regla GOV-BIZ-005 solo informa (INFO) capacidades no registradas.
+version: "2026.09"
+status: pendiente
+capabilities:
+  - Customer Relations Management
+  - Single View of Customers
+  - Segmentation
+  - Loyalty
+  - Customer Audiences & Marketing Insights
+  - Retail Planning
+  - Price, Promo & Markdown
+  - Demand Forecasting
+  - Supply Planning
+  - Replenishment
+  - Allocation
+  - Core Retail
+  - Store Check Out
+  - Customer Orders
+  - Seller Orders
+  - Returns
+  - Product Master Data
+  - Category Management
+  - Single View of Inventory
+  - Central Inventory Management
+  - Supply Chain & Logistics
+  - Campaigns
+  - Personalization
+  - Monetization
+  - Financial Reporting
+  - Cost Management
+  - Profitability
+  - Store Control
+  - Store Performance
+  - Workforce
+  - Strategic Metrics Management
+  - Data & Analytics
+  - KPI & Metrics
+  - Data Engineering
+  - Data Governance
+  - Metadata and Data Lineage
+  - Data Quality Management
+  - API & Integration Management

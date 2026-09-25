@@ -1,0 +1,11 @@
+version: 2
+sources:
+  - name: bronze_pos
+    schema: dlk_brz_cl_sal_pos
+    tables:
+      - name: pos_transactions
+  - name: product_master
+    description: "Salida contratada del Data Product DP-PDT-MASTER-CL-001 (contrato product_master 2.1.0)"
+    schema: dlk_gld_cl_pdt_master
+    tables:
+      - name: dim_product

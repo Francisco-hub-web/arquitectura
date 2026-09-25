@@ -1,0 +1,26 @@
+# Validaciones de PR: gobierno del cambio (15-dataops-cicd §16) + motor determinista govkit.
+name: pr
+on:
+  pull_request:
+    branches: [main, staging, develop]
+jobs:
+  validate:
+    uses: cencosud-data-global/base-workflows/.github/workflows/data-product-pr.yml@v1
+    secrets: inherit
+  governance:
+    runs-on: ubuntu-latest
+    permissions: {contents: read, security-events: write, pull-requests: write}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: govkit (lint + tests de contrato/metadata/seguridad)
+        run: |
+          curl -sSL "$GOVKIT_URL" | tar xz -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/govkit/bin/govkit" lint . --base "origin/${{ github.base_ref }}" --format sarif -o govkit.sarif --gh-summary
+        env:
+          GOVKIT_URL: ${{ vars.GOVKIT_TARBALL_URL }}
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: {sarif_file: govkit.sarif, category: govkit}

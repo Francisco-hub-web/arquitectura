@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cencosud.data/schemas/quality_rules.schema.json",
+  "title": "Ficha de calidad del Data Product",
+  "description": "quality/expectations/*.yaml — 08 §12, §13, §14, §26.",
+  "type": "object",
+  "required": [
+    "kind",
+    "spec"
+  ],
+  "properties": {
+    "kind": {
+      "const": "QualityRules"
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "gates": {
+          "type": "object"
+        },
+        "alerting": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string",
+              "format": "email"
+            },
+            "channel": {
+              "type": "string"
+            },
+            "critical_action": {
+              "type": "string"
+            }
+          }
+        },
+        "sla": {
+          "type": "object"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "dimension",
+              "layer",
+              "object",
+              "threshold",
+              "severity",
+              "action",
+              "owner"
+            ],
+            "properties": {
+              "dimension": {
+                "enum": [
+                  "completitud",
+                  "unicidad",
+                  "consistencia",
+                  "validez",
+                  "integridad_referencial",
+                  "freshness",
+                  "exactitud",
+                  "trazabilidad"
+                ]
+              },
+              "severity": {
+                "enum": [
+                  "critica",
+                  "alta",
+                  "media",
+                  "baja"
+                ]
+              },
+              "action": {
+                "enum": [
+                  "bloquear_pipeline",
+                  "bloquear_promocion",
+                  "publicar_con_warning",
+                  "alertar_owner",
+                  "registrar_incidente",
+                  "abrir_backlog"
+                ]
+              },
+              "layer": {
+                "enum": [
+                  "bronze",
+                  "silver",
+                  "gold",
+                  "semantic",
+                  "serving",
+                  "feature"
+                ]
+              }
+            }
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "rules"
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+# Configuración de govkit para este repositorio (schemas/govkit_config.schema.json)
+version: 1
+repo_name: %%repo%%
+policies:
+  branching: env-branches        # env-branches (Estructura de Repositorio) | trunk (15-dataops-cicd §15) — ver ADR-006
+# Excepciones: SIEMPRE con ADR, owner y vencimiento (una regla nunca se relaja sin trazabilidad).
+waivers: []
+#  - rule: GOV-STR-005
+#    paths: ["notebooks/**"]
+#    reason: "Exploración temporal previa a productivización"
+#    owner: nombre.apellido@cencosud.com
+#    adr: docs/adr/0002-notebooks-exploracion.md
+#    expires: 2026-12-31

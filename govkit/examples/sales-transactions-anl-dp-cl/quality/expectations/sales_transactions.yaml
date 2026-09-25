@@ -1,0 +1,25 @@
+kind: QualityRules
+metadata: {data_product: DP-SAL-TRANSACTIONS-CL-001, owner: jorge.munoz@cencosud.com, steward: carla.rojas@cencosud.com}
+spec:
+  gates:
+    silver: {criteria: "Claves no nulas, deduplicación y conformidad ARTS antes de promover", blocking: true}
+    gold: {criteria: "Reglas críticas en verde y conciliación de montos vs POS ≤ 0.5%", blocking: true}
+    serving: {criteria: "Freshness antes de las 07:00 y volumen en rango", blocking: false}
+  alerting:
+    owner: carla.rojas@cencosud.com
+    channel: "#dp-sales-transactions-cl"
+    critical_action: bloquear_promocion
+  sla: {completitud: "100%", freshness: "07:00", error_rate: "< 0.5%", duplicados: "< 0.1%"}
+  rules:
+    - {name: ticket_id_no_nulo, description: "Toda línea debe tener ticket", dimension: completitud, layer: silver,
+       object: fact_sales_line.ticket_id, threshold: "100%", severity: critica, action: bloquear_pipeline, owner: carla.rojas@cencosud.com}
+    - {name: ticket_linea_unica, description: "Sin duplicados por ticket y línea", dimension: unicidad, layer: gold,
+       object: fact_sales_line.line_number, threshold: "< 0.1%", severity: alta, action: bloquear_promocion, owner: carla.rojas@cencosud.com}
+    - {name: sku_en_product_master, description: "Todo SKU existe en Product Master", dimension: integridad_referencial, layer: silver,
+       object: product_master.sku_id, threshold: "99.5%", severity: alta, action: alertar_owner, owner: carla.rojas@cencosud.com}
+    - {name: monto_neto_valido, description: "Monto neto no negativo salvo devoluciones", dimension: validez, layer: gold,
+       object: fact_sales_line.net_amount_clp, threshold: "99.9%", severity: media, action: publicar_con_warning, owner: carla.rojas@cencosud.com}
+    - {name: publicacion_diaria, description: "Gold disponible antes de las 07:00", dimension: freshness, layer: gold,
+       object: fact_sales_line, threshold: "07:00", severity: alta, action: alertar_owner, owner: diego.silva@cencosud.com}
+    - {name: conciliacion_pos, description: "Monto diario Gold vs POS", dimension: consistencia, layer: gold,
+       object: fact_sales_line.net_amount_clp, threshold: "0.5%", severity: alta, action: registrar_incidente, owner: carla.rojas@cencosud.com}

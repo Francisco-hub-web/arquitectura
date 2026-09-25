@@ -1,0 +1,147 @@
+{
+  "PolicyName": "cencosud-policy-%%repo%%-infra",
+  "Tags": [
+    {
+      "Key": "ceco",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "ambiente",
+      "Value": "dev"
+    },
+    {
+      "Key": "pais",
+      "Value": "%%country%%"
+    },
+    {
+      "Key": "unidad-negocio",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "bandera",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "propietario",
+      "Value": "%%owner_email%%"
+    },
+    {
+      "Key": "creado-por",
+      "Value": "%%owner_email%%"
+    },
+    {
+      "Key": "aplicacion",
+      "Value": "glue"
+    },
+    {
+      "Key": "plataforma",
+      "Value": "Glue"
+    },
+    {
+      "Key": "proyecto",
+      "Value": "%%repo%%"
+    },
+    {
+      "Key": "nombre",
+      "Value": "cencosud-role-%%repo%%"
+    },
+    {
+      "Key": "Name",
+      "Value": "%%dp_name%%"
+    },
+    {
+      "Key": "cuenta",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "repo",
+      "Value": "https://github.com/cencosud-data-%%country%%/%%repo%%"
+    },
+    {
+      "Key": "tf-pipeline",
+      "Value": "yes"
+    },
+    {
+      "Key": "tf-module",
+      "Value": "iam-data-product"
+    },
+    {
+      "Key": "by",
+      "Value": "terraform"
+    },
+    {
+      "Key": "pep",
+      "Value": "<COMPLETAR>"
+    },
+    {
+      "Key": "apl",
+      "Value": "<COMPLETAR>"
+    }
+  ],
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "LogsWrite",
+        "Effect": "Allow",
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:PutRetentionPolicy"
+        ],
+        "Resource": [
+          "arn:aws:logs:*:*:log-group:/aws/glue/%%repo%%-*:*"
+        ]
+      },
+      {
+        "Sid": "SecretsManagerRead",
+        "Effect": "Allow",
+        "Action": [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ],
+        "Resource": [
+          "arn:aws:secretsmanager:*:*:secret:%%repo%%/*"
+        ]
+      },
+      {
+        "Sid": "EC2NetworkDescribe",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeVpcs"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "EC2NetworkInterfaceWrite",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface",
+          "ec2:ModifyNetworkInterfaceAttribute"
+        ],
+        "Resource": [
+          "arn:aws:ec2:*:*:network-interface/*"
+        ]
+      },
+      {
+        "Sid": "ECRRepositoryRead",
+        "Effect": "Allow",
+        "Action": [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchCheckLayerAvailability"
+        ],
+        "Resource": [
+          "arn:aws:ecr:*:*:repository/%%repo%%*"
+        ]
+      }
+    ]
+  }
+}

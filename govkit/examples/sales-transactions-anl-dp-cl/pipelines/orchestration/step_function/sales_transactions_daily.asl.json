@@ -1,0 +1,16 @@
+{
+  "Comment": "Orquestación diaria del Data Product sales-transactions (Bronze → Silver → Gold → quality gates)",
+  "StartAt": "IngestBronze",
+  "States": {
+    "IngestBronze": {"Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                     "Parameters": {"JobName": "sales-transactions-bronze-cdc"}, "Next": "SilverDbt"},
+    "SilverDbt": {"Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                  "Parameters": {"JobName": "sales-transactions-dbt-silver"}, "Next": "QualityGateSilver"},
+    "QualityGateSilver": {"Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                          "Parameters": {"JobName": "sales-transactions-dq-silver"}, "Next": "GoldDbt"},
+    "GoldDbt": {"Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                "Parameters": {"JobName": "sales-transactions-dbt-gold"}, "Next": "QualityGateGold"},
+    "QualityGateGold": {"Type": "Task", "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                        "Parameters": {"JobName": "sales-transactions-dq-gold"}, "End": true}
+  }
+}

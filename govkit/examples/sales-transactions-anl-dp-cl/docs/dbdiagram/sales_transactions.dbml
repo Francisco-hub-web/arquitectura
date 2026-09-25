@@ -1,0 +1,20 @@
+// Modelo lógico/físico Gold — sales-transactions-anl-dp-cl
+Project sales_transactions {
+  database_type: 'Iceberg'
+  Note: 'DP-SAL-TRANSACTIONS-CL-001'
+}
+Table fact_sales_line {
+  ticket_id varchar [pk]
+  line_number int [pk]
+  business_date date
+  store_id varchar
+  sku_id varchar
+  sales_channel_id varchar [ref: > dim_sales_channel.sales_channel_id]
+  units decimal
+  net_amount_clp decimal
+}
+Table dim_sales_channel {
+  sales_channel_id varchar [pk]
+  sales_channel_name varchar
+  is_digital boolean
+}

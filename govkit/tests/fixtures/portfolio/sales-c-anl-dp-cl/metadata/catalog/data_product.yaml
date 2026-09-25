@@ -1,0 +1,11 @@
+apiVersion: cencosud.data/v1
+kind: DataProduct
+metadata: {id: DP-SAL-C-CL-001, name: sales-c, version: 1.0.0}
+spec:
+  domain: sales
+  subdomain: orders
+  type: analytical
+  role: consumo
+  lifecycle: {state: productivo}
+  inputs:
+    - {name: b, type: data_product, data_product_ref: DP-SAL-B-CL-001}

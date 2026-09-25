@@ -1,0 +1,5 @@
+{"Version": "2012-10-17", "Statement": [
+  {"Sid": "Glue", "Effect": "Allow", "Action": ["glue:GetTables", "glue:GetDatabases"], "Resource": [
+    "arn:aws:glue:us-east-1:525143576690:catalog", "arn:aws:glue:us-east-1:525143576690:database/*", "arn:aws:glue:us-east-1:525143576690:table/*"]},
+  {"Sid": "DynamoDB", "Effect": "Allow", "Action": ["dynamodb:ListTables", "dynamodb:DescribeTable", "dynamodb:Scan"],
+   "Resource": ["arn:aws:dynamodb:us-east-1:525143576690:table/*"]}]}

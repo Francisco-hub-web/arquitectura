@@ -1,0 +1,13 @@
+# Monitores del Data Product (13 §9: freshness, volumen, esquema, calidad, linaje).
+kind: Monitors
+spec:
+  health_indicators: []
+  monitors: []
+#   - name: freshness_gold
+#     signal: freshness            # freshness|volume|schema|quality|lineage|pipeline|usage|security|data_drift|model_drift
+#     target: gold.<tabla>
+#     threshold: "PT24H"
+#     severity: critico            # critico|alto|medio|bajo
+#     owner: equipo@cencosud.com
+#     channel: "#canal-alertas"
+#     runbook: docs/engineering/runbook.md#freshness

@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: fact_sales_line
+    description: "Hecho de ventas por línea de ticket y día de negocio; montos netos en CLP sin IVA."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticket_id, line_number]
+    columns:
+      - name: ticket_id
+        tests: [not_null]
+      - name: net_amount_clp
+        tests: [not_null]
+  - name: dim_sales_channel
+    description: "Dimensión conformada de canales de venta (tienda, e-commerce, app, marketplace)."
+    columns:
+      - name: sales_channel_id
+        tests: [unique, not_null]

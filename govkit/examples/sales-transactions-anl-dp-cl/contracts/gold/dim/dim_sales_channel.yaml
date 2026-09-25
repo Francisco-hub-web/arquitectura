@@ -1,0 +1,21 @@
+apiVersion: cencosud.data/v1
+kind: DataContract
+metadata:
+  name: dim_sales_channel
+  version: 1.0.0
+  data_product: DP-SAL-TRANSACTIONS-CL-001
+  domain: sales
+  owner: jorge.munoz@cencosud.com
+  description: "Dimensión conformada de canales de venta del dominio Sales."
+spec:
+  direction: output
+  layer: gold
+  granularity: "canal de venta"
+  business_keys: [sales_channel_id]
+  schema:
+    - {name: sales_channel_id, type: string, required: true, description: "Código del canal de venta", pii: false}
+    - {name: sales_channel_name, type: string, required: true, description: "Nombre visible del canal", pii: false}
+    - {name: is_digital, type: boolean, required: true, description: "Verdadero si el canal es digital", pii: false}
+  sla: {frequency: diaria, freshness: PT24H}
+  classification: interno
+  compatibility: backward

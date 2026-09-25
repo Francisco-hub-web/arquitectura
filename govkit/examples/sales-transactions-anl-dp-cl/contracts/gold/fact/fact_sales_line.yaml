@@ -1,0 +1,26 @@
+apiVersion: cencosud.data/v1
+kind: DataContract
+metadata:
+  name: fact_sales_line
+  version: 1.0.0
+  data_product: DP-SAL-TRANSACTIONS-CL-001
+  domain: sales
+  owner: jorge.munoz@cencosud.com
+  description: "Esquema físico Gold del hecho de ventas por línea de ticket."
+spec:
+  direction: output
+  layer: gold
+  granularity: "línea de ticket"
+  business_keys: [ticket_id, line_number]
+  schema:
+    - {name: ticket_id, type: string, required: true, description: "Identificador del ticket", pii: false}
+    - {name: line_number, type: integer, required: true, description: "Posición de la línea", pii: false}
+    - {name: business_date, type: date, required: true, description: "Día de negocio", pii: false}
+    - {name: store_id, type: string, required: true, description: "Código de tienda", pii: false}
+    - {name: sku_id, type: string, required: true, description: "Código SKU", pii: false}
+    - {name: sales_channel_id, type: string, required: true, description: "Canal de venta", pii: false}
+    - {name: units, type: "decimal(18,3)", required: true, description: "Unidades vendidas", pii: false}
+    - {name: net_amount_clp, type: "decimal(18,2)", required: true, description: "Monto neto CLP sin IVA", pii: false}
+  sla: {frequency: diaria, freshness: PT24H}
+  classification: confidencial
+  compatibility: backward

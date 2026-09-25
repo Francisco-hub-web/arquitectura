@@ -1,0 +1,538 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cencosud.data/schemas/data_product.schema.json",
+  "title": "Ficha de Data Product (metadata as code)",
+  "description": "Estructura canónica de metadata/catalog/data_product.yaml. Deriva de 06-data-product-definition.md (bloques 1-20), 09 §10/§16 y 14 §8.3/§13. Extensiones locales con prefijo x-.",
+  "type": "object",
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "cencosud.data/v1"
+    },
+    "kind": {
+      "const": "DataProduct"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^DP-[A-Z0-9]+(-[A-Z0-9]+)+$"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "semver"
+        },
+        "description": {
+          "type": "string"
+        },
+        "created": {
+          "type": "string",
+          "format": "date"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date"
+        },
+        "document_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string"
+        },
+        "subdomain": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "analytical",
+            "operational",
+            "saas_driven",
+            "ai_ml",
+            "semantic_metrics"
+          ]
+        },
+        "role": {
+          "enum": [
+            "maestro",
+            "consumo"
+          ]
+        },
+        "consumption_pattern": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "countries": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "business_units": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "functional_scope": {
+              "type": "string"
+            }
+          }
+        },
+        "lifecycle": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string"
+            },
+            "target_level": {
+              "enum": [
+                "mvp",
+                "industrializado",
+                "estrategico"
+              ]
+            },
+            "phase_owners": {
+              "type": "object"
+            }
+          }
+        },
+        "criticality": {
+          "enum": [
+            "baja",
+            "media",
+            "alta",
+            "critica"
+          ]
+        },
+        "business": {
+          "type": "object",
+          "properties": {
+            "capability": {
+              "type": "string"
+            },
+            "subcapability": {
+              "type": "string"
+            },
+            "use_cases": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "problem": {
+              "type": "string"
+            },
+            "opportunity": {
+              "type": "string"
+            },
+            "decision_enabled": {
+              "type": "string"
+            },
+            "kpis": {
+              "type": "array"
+            },
+            "value_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "value_hypothesis": {
+              "type": "string"
+            },
+            "strategic_objective": {
+              "type": "string"
+            },
+            "requesting_area": {
+              "type": "string"
+            },
+            "sponsor": {
+              "type": "string"
+            },
+            "benefit_horizon": {
+              "type": "string"
+            }
+          }
+        },
+        "ownership": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "stakeholders": {
+          "type": "object"
+        },
+        "consumers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ]
+          }
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ]
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ]
+          }
+        },
+        "modeling": {
+          "type": "object",
+          "properties": {
+            "layers": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "bronze",
+                  "silver",
+                  "gold",
+                  "semantic",
+                  "serving",
+                  "feature"
+                ]
+              }
+            },
+            "arts_alignment": {
+              "enum": [
+                "alineado",
+                "extension",
+                "modelo_propio"
+              ]
+            },
+            "table_format": {
+              "type": "string"
+            },
+            "entities": {
+              "type": "array"
+            },
+            "grain": {
+              "type": "string"
+            }
+          }
+        },
+        "classification": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "enum": [
+                "publico",
+                "interno",
+                "confidencial",
+                "sensible_pii"
+              ]
+            },
+            "pii": {
+              "type": "boolean"
+            },
+            "financial": {
+              "type": "boolean"
+            },
+            "third_party_exposure": {
+              "type": "boolean"
+            },
+            "masking_required": {
+              "type": "boolean"
+            },
+            "special_retention": {
+              "type": "boolean"
+            },
+            "regulations": {
+              "type": "array"
+            }
+          }
+        },
+        "access": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "enum": [
+                "rbac",
+                "abac"
+              ]
+            },
+            "level": {
+              "enum": [
+                "abierto_corporativo_controlado",
+                "restringido_dominio",
+                "restringido_rol",
+                "restringido_necesidad"
+              ]
+            },
+            "rls": {
+              "type": "boolean"
+            },
+            "cls": {
+              "type": "boolean"
+            },
+            "third_party": {
+              "type": "object"
+            }
+          }
+        },
+        "privacy": {
+          "type": "object",
+          "properties": {
+            "pia": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "enum": [
+                    "pendiente",
+                    "en_curso",
+                    "completado",
+                    "no_aplica"
+                  ]
+                },
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "reference": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "sla": {
+          "type": "object",
+          "properties": {
+            "frequency": {
+              "type": "string"
+            },
+            "freshness": {
+              "type": "string"
+            },
+            "availability": {
+              "type": "string"
+            },
+            "publication_window": {
+              "type": "string"
+            }
+          }
+        },
+        "quality_slos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "dimension",
+              "target"
+            ]
+          }
+        },
+        "retention": {
+          "type": "object",
+          "properties": {
+            "policy": {
+              "type": "string"
+            },
+            "period": {
+              "type": "string"
+            },
+            "archive": {
+              "type": "string"
+            },
+            "deletion": {
+              "type": "string"
+            },
+            "deprecation": {
+              "type": "string"
+            },
+            "right_to_be_forgotten": {
+              "type": "string"
+            }
+          }
+        },
+        "cost": {
+          "type": "object",
+          "properties": {
+            "monitoring": {
+              "type": "boolean"
+            },
+            "owner": {
+              "type": "string"
+            },
+            "cost_center": {
+              "type": "string"
+            }
+          }
+        },
+        "adoption": {
+          "type": "object",
+          "properties": {
+            "metrics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "last_usage": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        },
+        "glossary_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "lineage": {
+          "type": "object",
+          "properties": {
+            "expected": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "type": "array"
+        },
+        "semantic": {
+          "type": "object",
+          "properties": {
+            "exposes_metrics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dimensions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "hierarchies": {
+              "type": "array"
+            },
+            "semantic_layer": {
+              "type": "string"
+            }
+          }
+        },
+        "ai": {
+          "type": "object",
+          "properties": {
+            "use_case": {
+              "type": "string"
+            },
+            "usage": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "features",
+                  "training",
+                  "inference",
+                  "rag",
+                  "embeddings"
+                ]
+              }
+            },
+            "criticality": {
+              "type": "string"
+            },
+            "rag": {
+              "type": "object"
+            }
+          }
+        },
+        "consumption": {
+          "type": "object"
+        },
+        "observability": {
+          "type": "object"
+        },
+        "retirement": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "format": "date"
+            },
+            "replacement": {
+              "type": "string"
+            },
+            "consumers_notified": {
+              "type": "boolean"
+            },
+            "communication": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required": [
+        "domain",
+        "type",
+        "lifecycle"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      }
+    }
+  }
+}

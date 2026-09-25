@@ -1,0 +1,5 @@
+sales_channel_id,sales_channel_name,is_digital
+TDA,Tienda física,false
+ECO,E-commerce web,true
+APP,App móvil,true
+MKP,Marketplace,true

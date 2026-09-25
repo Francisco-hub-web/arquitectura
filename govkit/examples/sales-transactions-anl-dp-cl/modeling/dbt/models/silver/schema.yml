@@ -1,0 +1,9 @@
+version: 2
+models:
+  - name: odm_retail_transaction_line
+    description: "Línea de transacción retail conformada a ARTS ODM (extensión Cencosud), deduplicada por ticket y línea."
+    columns:
+      - name: ticket_id
+        tests: [not_null]
+  - name: sales_channel_dictionary
+    description: "Diccionario de canales de venta del dominio Sales cargado desde seed versionado."

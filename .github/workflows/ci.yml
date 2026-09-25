@@ -1,0 +1,26 @@
+# CI del repositorio de arquitectura: integridad del catálogo y la KB, suite del kit y build del tarball.
+name: ci
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+jobs:
+  govkit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "${{ matrix.python }}"}
+      - name: KB válida y cruzada con el catálogo
+        run: govkit/bin/govkit kb validate
+      - name: Suite de pruebas
+        run: govkit/bin/govkit selftest
+      - name: Matriz de reglas sincronizada con el catálogo
+        run: |
+          govkit/bin/govkit rules --format md > /tmp/matriz.md
+          diff -u docs/01-matriz-reglas.md /tmp/matriz.md
+      - name: Build del kit
+        run: ./scripts/build-kit.sh

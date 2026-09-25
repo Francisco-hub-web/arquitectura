@@ -1,0 +1,26 @@
+apiVersion: cencosud.data/v1
+kind: DataContract
+metadata:
+  name: product_master
+  version: 2.1.0
+  data_product: DP-SAL-TRANSACTIONS-CL-001
+  domain: sales
+  owner: diego.silva@cencosud.com
+  description: "Referencia al contrato de salida del Data Product Product Master CL consumido para la jerarquía de producto."
+spec:
+  direction: input
+  layer: gold
+  producer: DP-PDT-MASTER-CL-001
+  granularity: "SKU vigente"
+  business_keys: [sku_id]
+  format: [iceberg]
+  schema:
+    - {name: sku_id, type: string, required: true, description: "Código SKU corporativo", pii: false}
+    - {name: category_id, type: string, required: true, description: "Categoría de la jerarquía corporativa", pii: false}
+  sla: {frequency: diaria, freshness: PT24H}
+  classification: interno
+  compatibility: backward
+  change_policy:
+    breaking_changes: major_version_and_notice
+    notice_days: 30
+    notification_channel: "#dp-product-master-cl"
