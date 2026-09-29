@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================================
 #  govkit — instalador (macOS / Linux · compatible con bash 3.2)
-#  Uso:  cd ~/Downloads && tar xzf govkit-v1.1.1.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+#  Uso:  cd ~/Downloads && tar xzf govkit-v1.1.2.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 #  Opciones:
 #    --pull-model        descarga el modelo local en Ollama (si Ollama está instalado)
 #    --model NOMBRE      modelo por defecto (default: qwen2.5:7b-instruct)

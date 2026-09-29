@@ -105,9 +105,11 @@ def cmd_fix(args):
 
     engine = _engine(args, ["dp"])
     before = engine.run()
-    actions = fixer.plan(before, placeholders=not args.no_placeholders)
+    overrides = {"domain": args.domain, "subdomain": args.subdomain, "type": args.type, "country": args.country,
+                 "owner": args.owner}
+    actions = fixer.plan(before, placeholders=not args.no_placeholders, overrides=overrides)
     if args.apply:
-        fixer.apply(before.ctx, actions)
+        fixer.apply(before.ctx, actions, overrides=overrides)
         after = _engine(args, ["dp"]).run()
     if args.format == "json":
         out = {"mode": "apply" if args.apply else "plan", "target": before.ctx.repo_name,
@@ -373,6 +375,11 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--stage", help="planificar contra un estado destino (p.ej. listo_para_produccion)")
     p.add_argument("--rules", help="limitar a reglas (glob, coma)")
     p.add_argument("--no-placeholders", action="store_true", help="no insertar claves ausentes como <COMPLETAR>")
+    p.add_argument("--domain", help="dominio para las plantillas (si el nombre del repo no es estándar)")
+    p.add_argument("--subdomain", help="subdominio para las plantillas")
+    p.add_argument("--type", choices=["anl", "txd"], help="tipo de Data Product para las plantillas")
+    p.add_argument("--country", help="país (cl, pe, co, br, ar, uy, reg)")
+    p.add_argument("--owner", help="email del business owner para la ficha")
     p.add_argument("--format", choices=["console", "json"], default="console")
     p.add_argument("--verbose", "-v", action="store_true", help="listar también las remediaciones manuales")
     p.set_defaults(fn=cmd_fix)

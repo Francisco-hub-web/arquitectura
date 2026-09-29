@@ -193,24 +193,38 @@ def bump(version: Any, part: str) -> Optional[str]:
 
 
 # ============================================================== plantillas corporativas
-def repo_vars(ctx) -> Optional[Dict[str, str]]:
-    """Variables de plantilla derivadas del repo existente (ficha o nombre estándar)."""
-    m = re.match(r"^(?P<body>[a-z0-9-]+)-(?P<type>txd|anl)-dp-(?P<country>[a-z]{2})$", ctx.repo_name or "")
-    domain, sub = ctx.dp_get("spec.domain"), ctx.dp_get("spec.subdomain")
-    if not (domain and sub) and m:
-        body = m.group("body")
+def repo_vars(ctx, overrides: Optional[Dict[str, str]] = None) -> Optional[Dict[str, str]]:
+    """Variables de plantilla para un repo existente. Prioridad: `overrides` (CLI) → ficha → nombre del repo.
+
+    El nombre estándar es `{dominio}-{subdominio}-{txd|anl}-dp-{país}`; si el repo usa otra convención pero termina
+    en `-dp-{país}` (p.ej. `forecast-derived-mdh-dp-cl`), se toma el primer segmento como dominio y el resto como
+    subdominio. Los archivos generados referencian siempre el nombre REAL del repo.
+    """
+    ov = {k: v for k, v in (overrides or {}).items() if v}
+    name = ctx.repo_name or ""
+    m = re.match(r"^(?P<body>[a-z0-9-]+)-(?P<type>txd|anl)-dp-(?P<country>[a-z]{2,3})$", name)
+    loose = re.match(r"^(?P<body>[a-z0-9]+(?:-[a-z0-9]+)+)-dp-(?P<country>[a-z]{2,3})$", name)
+    domain = ov.get("domain") or ctx.dp_get("spec.domain")
+    sub = ov.get("subdomain") or ctx.dp_get("spec.subdomain")
+    if not (domain and sub) and (m or loose):
+        body = (m or loose).group("body")
         known = sorted(registry("domains").get("domains", {}), key=len, reverse=True)
-        dom = next((d for d in known if body.startswith(d.replace("_", "-") + "-")), body.split("-", 1)[0])
-        domain, sub = dom, body[len(dom.replace("_", "-")) + 1:] or None
+        dom = domain or next((d for d in known if body.startswith(d.replace("_", "-") + "-")), body.split("-", 1)[0])
+        rest = body[len(dom.replace("_", "-")) + 1:] if body.startswith(dom.replace("_", "-") + "-") else None
+        domain, sub = dom, sub or rest
     if not (domain and sub):
         return None
     dp_type = ctx.dp_get("spec.type")
-    type_code = m.group("type") if m else ("txd" if dp_type == "operational" else "anl")
+    type_code = ov.get("type") or (m.group("type") if m else ("txd" if dp_type == "operational" else "anl"))
     countries = ctx.dp_get("spec.scope.countries") or []
-    country = m.group("country") if m else (str(countries[0]) if countries else "cl")
-    owner = ctx.dp_get("spec.ownership.business_owner")
+    country = ov.get("country") or ((m or loose).group("country") if (m or loose) else
+                                    (str(countries[0]) if countries else "cl"))
+    owner = ov.get("owner") or ctx.dp_get("spec.ownership.business_owner")
     owner = owner if isinstance(owner, str) and "@" in owner and "<" not in owner else None
-    return variables(str(domain), str(sub).replace("_", "-"), type_code, country, owner)
+    out = variables(str(domain), str(sub).replace("_", "-"), type_code, country, owner)
+    if name and not ov.get("domain"):
+        out["repo"] = name  # plantillas (CODEOWNERS, README, IAM…) con el nombre real, no el reconstruido
+    return out
 
 
 def template_map(vars_: Optional[Dict[str, str]]) -> Dict[str, Path]:
@@ -222,9 +236,9 @@ def template_map(vars_: Optional[Dict[str, str]]) -> Dict[str, Path]:
 
 
 # ============================================================== planificación
-def plan(res, placeholders: bool = True) -> List[Action]:
+def plan(res, placeholders: bool = True, overrides: Optional[Dict[str, str]] = None) -> List[Action]:
     ctx = res.ctx
-    vars_ = repo_vars(ctx)
+    vars_ = repo_vars(ctx, overrides)
     templates = template_map(vars_)
     actions: Dict[Tuple[str, str, str], Action] = {}
 
@@ -290,9 +304,9 @@ def plan(res, placeholders: bool = True) -> List[Action]:
 
 
 # ============================================================== aplicación
-def apply(ctx, actions: List[Action]) -> List[Action]:
+def apply(ctx, actions: List[Action], overrides: Optional[Dict[str, str]] = None) -> List[Action]:
     root: Path = ctx.root
-    vars_ = repo_vars(ctx)
+    vars_ = repo_vars(ctx, overrides)
     templates = template_map(vars_)
     for a in actions:
         if a.kind == "manual":
@@ -312,7 +326,12 @@ def apply(ctx, actions: List[Action]) -> List[Action]:
                     a.status, a.reason = "failed", "el archivo ya existe"
                     continue
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(_render(templates[a.file].read_text(encoding="utf-8"), vars_ or {}), encoding="utf-8")
+                text = _render(templates[a.file].read_text(encoding="utf-8"), vars_ or {})
+                if a.file.endswith("data_product.yaml") and ctx.stage != "en_definicion":
+                    # Repo existente: la ficha nace en el estado con que se evaluó (default en_desarrollo o --stage),
+                    # no en `en_definicion`, para no relajar las severidades de un producto que ya tiene código.
+                    text = re.sub(r"(?m)^(\s+state:\s*)en_definicion\b", lambda m: m.group(1) + ctx.stage, text, count=1)
+                target.write_text(text, encoding="utf-8")
                 a.status = "applied"
             else:
                 text = target.read_text(encoding="utf-8")

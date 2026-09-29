@@ -1,5 +1,14 @@
 # Changelog — govkit
 
+## 1.1.2 — 2026-09-29
+### Corregido
+- `govkit fix` en repos con nombre no estándar (p. ej. `forecast-derived-mdh-dp-cl`): las plantillas (ficha,
+  CODEOWNERS, CHANGELOG, workflows, contrato, calidad…) ya no quedan como "manual". Toma dominio/subdominio del
+  nombre si termina en `-dp-{país}`, o de `--domain/--subdomain/--type/--country/--owner` (también en la
+  herramienta MCP `fix`). Los archivos generados usan el nombre real del repo.
+- La ficha creada por `fix` en un repo existente nace en el estado evaluado (`en_desarrollo` por defecto o
+  `--stage`), no en `en_definicion`, para no relajar severidades de un producto que ya tiene código.
+
 ## 1.1.1 — 2026-09-29
 ### Corregido
 - GOV-SEC-006 detecta secretos en constantes y claves con prefijo/sufijo (`DB_PASSWORD = "…"`, `SNOWFLAKE_PWD`,

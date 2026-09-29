@@ -1,6 +1,6 @@
 # Sistema de Gobernanza Híbrido de Datos — Documento de Arquitectura de Solución (SAD)
 
-Versión: 1.1 (govkit 1.1.1: integración MCP, auto-remediación y reporte HTML)
+Versión: 1.1 (govkit 1.1.2: integración MCP, auto-remediación y reporte HTML)
 Estado: Propuesta para revisión del Equipo de Arquitectura de Datos Regional
 Fecha: 2026-09-25
 Alcance: Corporativo (aplicable a todos los repositorios de Data Products y al repositorio `access-analyzer`)
@@ -22,7 +22,7 @@ Este documento propone convertirla en un **Sistema de Gobernanza Híbrido** con 
 > Solo la superficie que requiere interpretación llega a un LLM local, con un contexto mínimo y verificable (consultivo).
 > Lo organizacional queda como checklist humano explícito.
 
-Resultados medidos sobre la implementación de referencia (`govkit` v1.1.1):
+Resultados medidos sobre la implementación de referencia (`govkit` v1.1.2):
 
 | Indicador | Valor |
 |---|---|
@@ -36,7 +36,7 @@ Resultados medidos sobre la implementación de referencia (`govkit` v1.1.1):
 | Latencia del motor determinista (repo de referencia, 73 archivos) | ≈0,5 s |
 | Superficies de integración | CLI · pre-commit · CI (SARIF / JSON / HTML) · **MCP para agentes de código** (10 herramientas) |
 | Auto-remediación segura (`govkit fix`) | carpetas, plantillas, valores deterministas, semver, esqueleto `<COMPLETAR>` · ≈1 s |
-| Pruebas automatizadas del kit | 68 (Python 3.9 → 3.13) |
+| Pruebas automatizadas del kit | 70 (Python 3.9 → 3.13) |
 
 El corpus documental completo (~19 páginas más lineamientos; del orden de decenas de miles de tokens, estimado) no cabe
 en la ventana útil de un modelo local 7B–14B y, aun si cupiera, diluiría la atención del modelo. La modularización
@@ -741,6 +741,6 @@ arquitectura/
     │                fixer [govkit fix], mcpserver [govkit mcp], cli)
     ├── templates/data-product/ · templates/github/
     ├── examples/sales-transactions-anl-dp-cl/   ← Data Product de referencia (PASS en gate)
-    ├── tests/ (68 pruebas + fixtures omd/docs/portfolio)
+    ├── tests/ (70 pruebas + fixtures omd/docs/portfolio)
     └── vendor/yaml (PyYAML puro, MIT)
 ```

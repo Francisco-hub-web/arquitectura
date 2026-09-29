@@ -112,14 +112,16 @@ def t_score(path="."):
                         for k, p in sc["pillars"].items()}}
 
 
-def t_fix(path=".", apply=False, stage=None, rules=None, placeholders=True):
+def t_fix(path=".", apply=False, stage=None, rules=None, placeholders=True, domain=None, subdomain=None, type=None,
+          country=None, owner=None):
     from govkit import fixer
 
     before = _run(path, ["dp"], stage, rules=rules)
-    actions = fixer.plan(before, placeholders=placeholders)
+    ov = {"domain": domain, "subdomain": subdomain, "type": type, "country": country, "owner": owner}
+    actions = fixer.plan(before, placeholders=placeholders, overrides=ov)
     out: Dict[str, Any] = {"mode": "apply" if apply else "plan", "before": before.counts()}
     if apply:
-        fixer.apply(before.ctx, actions)
+        fixer.apply(before.ctx, actions, overrides=ov)
         after = _run(path, ["dp"], stage, rules=rules)
         out.update(after=after.counts(), verdict_after=after.verdict)
     out["actions"] = [a.to_dict() for a in actions]
@@ -275,7 +277,10 @@ def tool_specs() -> List[Dict[str, Any]]:
          "inputSchema": {"type": "object", "properties": {
              "path": path, "apply": {"type": "boolean", "default": False},
              "stage": _p("Planificar contra un estado destino", type="string", enum=_states()),
-             "rules": {"type": "string"}, "placeholders": {"type": "boolean", "default": True}}},
+             "rules": {"type": "string"}, "placeholders": {"type": "boolean", "default": True},
+             "domain": _p("Dominio para plantillas si el nombre del repo no es estándar", type="string"),
+             "subdomain": {"type": "string"}, "type": {"type": "string", "enum": ["anl", "txd"]},
+             "country": {"type": "string"}, "owner": _p("Email del business owner", type="string")}},
          "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}},
         {"name": "explain_rule", "title": "Trazabilidad de una regla",
          "description": "Fuente (documento § cita), naturaleza, severidad por etapa, remediación y reglas KB de una regla GOV-*.",

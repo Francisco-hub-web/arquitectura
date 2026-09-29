@@ -107,6 +107,42 @@ class TestFix(unittest.TestCase):
             self.assertIn(("template", DP), {(a.kind, a.file) for a in actions})
 
 
+class TestFixNonStandardRepo(unittest.TestCase):
+    def _repo(self, tmp, name="forecast-derived-mdh-dp-cl"):
+        from pathlib import Path
+        root = Path(tmp) / name
+        (root / "modeling/dbt/models").mkdir(parents=True)
+        (root / "modeling/dbt/_cicd_smoke_test.txt").write_text("smoke\n")
+        (root / "modeling/dbt/dbt_project.yml").write_text("name: forecast\nprofile: forecast\n")
+        (root / "README.md").write_text("# forecast\n")
+        return root
+
+    def test_bootstraps_ficha_from_loose_name_in_evaluated_state(self):
+        with TempDir() as tmp:
+            root = self._repo(tmp)
+            res = lint(root)
+            actions = fixer.plan(res)
+            self.assertIn(("template", DP), {(a.kind, a.file) for a in actions})
+            fixer.apply(res.ctx, actions)
+            ficha = yaml.safe_load((root / DP).read_text(encoding="utf-8"))
+            self.assertEqual((ficha["spec"]["domain"], ficha["spec"]["subdomain"]), ("forecast", "derived_mdh"))
+            self.assertEqual(ficha["spec"]["lifecycle"]["state"], "en_desarrollo")  # no relaja severidades
+            self.assertNotIn("GOV-DPD-001", ids(lint(root)))
+
+    def test_overrides_take_precedence(self):
+        with TempDir() as tmp:
+            root = self._repo(tmp, name="legacy-repo")  # sin sufijo -dp-{país}: requiere overrides
+            res = lint(root)
+            self.assertNotIn(("template", DP), {(a.kind, a.file) for a in fixer.plan(res)})
+            ov = {"domain": "supply", "subdomain": "forecast", "type": "anl", "country": "cl",
+                  "owner": "ana.perez@cencosud.com"}
+            actions = fixer.plan(res, overrides=ov)
+            fixer.apply(res.ctx, actions, overrides=ov)
+            ficha = yaml.safe_load((root / DP).read_text(encoding="utf-8"))
+            self.assertEqual(ficha["spec"]["domain"], "supply")
+            self.assertEqual(ficha["spec"]["ownership"]["business_owner"], "ana.perez@cencosud.com")
+
+
 class TestMcp(unittest.TestCase):
     def rpc(self, *msgs):
         out = io.StringIO()

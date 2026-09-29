@@ -15,14 +15,14 @@ Data & AI Discipline Framework de Cencosud. Arquitectura: `docs/00-SAD-sistema-g
 | `kb/` | 22 mini-contextos `KB_00 … KB_21` + `_graph.yaml` (dependencias, tareas, proyecciones) |
 | `templates/` | Esqueleto de repo de Data Product (`govkit init`) y workflow reusable de CI |
 | `examples/sales-transactions-anl-dp-cl/` | Data Product de referencia completo (PASS en gate a producción) |
-| `tests/` | 68 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado, fix, MCP, HTML) |
+| `tests/` | 70 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado, fix, MCP, HTML) |
 | `vendor/yaml` | PyYAML 6.0.1 puro Python (MIT) para instalación sin pip |
 
 ## Comandos
 
 ```
 govkit lint [path] [--base REF] [--stage S] [--profile pre-commit|pr|gate|catalog|periodic] [--format console|json|sarif|md|html]
-govkit fix [path] [--apply] [--stage S] [--no-placeholders] [-v]      govkit mcp [--print-config]
+govkit fix [path] [--apply] [--stage S] [--no-placeholders] [--domain D --subdomain S --type anl|txd --country C --owner E] [-v]      govkit mcp [--print-config]
 govkit gate [path] --to <estado>            govkit score [path]            govkit baseline [path]
 govkit init --domain D --subdomain S --type anl|txd --country cl [--owner email]
 govkit rules [--format md|json] [--nature DH]   govkit explain GOV-XXX-NNN
