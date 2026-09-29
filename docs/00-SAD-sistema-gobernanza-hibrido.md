@@ -1,6 +1,6 @@
 # Sistema de Gobernanza Híbrido de Datos — Documento de Arquitectura de Solución (SAD)
 
-Versión: 1.1 (govkit 1.1.2: integración MCP, auto-remediación y reporte HTML)
+Versión: 1.1 (govkit 1.2.0: integración MCP, auto-remediación, reporte HTML y modo privado)
 Estado: Propuesta para revisión del Equipo de Arquitectura de Datos Regional
 Fecha: 2026-09-25
 Alcance: Corporativo (aplicable a todos los repositorios de Data Products y al repositorio `access-analyzer`)
@@ -22,7 +22,7 @@ Este documento propone convertirla en un **Sistema de Gobernanza Híbrido** con 
 > Solo la superficie que requiere interpretación llega a un LLM local, con un contexto mínimo y verificable (consultivo).
 > Lo organizacional queda como checklist humano explícito.
 
-Resultados medidos sobre la implementación de referencia (`govkit` v1.1.2):
+Resultados medidos sobre la implementación de referencia (`govkit` v1.2.0):
 
 | Indicador | Valor |
 |---|---|
@@ -36,7 +36,7 @@ Resultados medidos sobre la implementación de referencia (`govkit` v1.1.2):
 | Latencia del motor determinista (repo de referencia, 73 archivos) | ≈0,5 s |
 | Superficies de integración | CLI · pre-commit · CI (SARIF / JSON / HTML) · **MCP para agentes de código** (10 herramientas) |
 | Auto-remediación segura (`govkit fix`) | carpetas, plantillas, valores deterministas, semver, esqueleto `<COMPLETAR>` · ≈1 s |
-| Pruebas automatizadas del kit | 70 (Python 3.9 → 3.13) |
+| Pruebas automatizadas del kit | 77 (Python 3.9 → 3.13) |
 
 El corpus documental completo (~19 páginas más lineamientos; del orden de decenas de miles de tokens, estimado) no cabe
 en la ventana útil de un modelo local 7B–14B y, aun si cupiera, diluiría la atención del modelo. La modularización
@@ -620,6 +620,20 @@ servidor en Claude Code (`claude mcp add -s user govkit -- govkit mcp`) si el CL
 Edición de YAML **conservando comentarios** (inserción por posición de nodos, no re-serialización) y verificación
 post-edición: re-parseo, clave presente con el valor esperado y ninguna clave previa perdida; si falla, se revierte.
 
+### 6.3 Uso personal: lanzador y modo privado
+
+Durante la adopción, govkit funciona como apoyo **local** del desarrollador sin dejar rastro en el repositorio remoto:
+
+| Mecanismo | Qué garantiza |
+|---|---|
+| `govkit "texto"` | abre Claude Code con el MCP govkit, permisos de solo lectura preaprobados, contexto del repo y reglas de privacidad |
+| Plantillas neutrales | lo que `init`/`fix` escriben es solo el estándar corporativo (sin mencionar la herramienta) |
+| `fix` sin efectos externos | no crea workflows de CI ni `CODEOWNERS` (disparan ejecuciones o revisores en el GitHub corporativo) |
+| `.git/govkit/` | config y baseline personales dentro de `.git/` (nunca se versionan) |
+| `.git/info/exclude` | ignora localmente cualquier archivo de govkit |
+| Guardias locales | pre-commit (contenido), commit-msg (mensaje) y pre-push (ramas, mensajes y contenido) bloquean menciones; hooks del equipo encadenados |
+| `govkit privado --check` | auditoría de rastros en archivos versionados, stage, ramas y commits sin subir |
+
 ---
 
 ## 7. Especificación de interfaces
@@ -631,6 +645,7 @@ post-edición: re-parseo, clave presente con el valor esperado y ninguna clave p
 | `govkit lint [path] [--base REF] [--stage S] [--profile P] [--format console\|json\|sarif\|md\|html]` | Motor determinista | reporte + exit code |
 | `govkit fix [path] [--apply] [--stage S] [--no-placeholders]` | Auto-remediación segura (simulación por defecto) | plan / cambios + delta |
 | `govkit mcp [--print-config]` | Servidor MCP stdio para agentes (Claude Code, Cursor, Claude Desktop) | JSON-RPC |
+| `govkit "texto"` · `govkit privado [--check]` | Lanzador de Claude Code con govkit · uso local sin rastro en el remoto | sesión / guardias |
 | `govkit gate [path] --to <estado>` | Pre-flight de promoción con severidades del estado destino | APROBADO / BLOQUEADO |
 | `govkit score [path]` | Pre-score por pilar (19) evaluado contra `productivo` | tabla / JSON |
 | `govkit init --domain --subdomain --type --country [--owner]` | Repo estándar (estructura, ficha, contratos, IAM data+infra, CI) | repo listo para `lint` |
@@ -741,6 +756,6 @@ arquitectura/
     │                fixer [govkit fix], mcpserver [govkit mcp], cli)
     ├── templates/data-product/ · templates/github/
     ├── examples/sales-transactions-anl-dp-cl/   ← Data Product de referencia (PASS en gate)
-    ├── tests/ (70 pruebas + fixtures omd/docs/portfolio)
+    ├── tests/ (77 pruebas + fixtures omd/docs/portfolio)
     └── vendor/yaml (PyYAML puro, MIT)
 ```

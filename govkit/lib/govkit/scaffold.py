@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import datetime as _dt
-import os
-import stat
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -66,24 +64,3 @@ def scaffold(domain: str, subdomain: str, type_code: str, country: str, dest: st
         if not any(p.iterdir()):
             (p / ".gitkeep").write_text("", encoding="utf-8")
     return root
-
-
-HOOK = """#!/usr/bin/env bash
-# govkit pre-commit: perfil rápido (sintaxis, secretos, nomenclatura, esquemas) sobre el repo.
-command -v govkit >/dev/null 2>&1 || { echo "govkit no está en PATH (source ~/.zshrc)"; exit 0; }
-govkit lint . --profile pre-commit --fail-on BLOCKER || {
-  echo ""; echo "⛔ govkit bloqueó el commit (hallazgos BLOCKER). Detalle: govkit lint -v"; exit 1; }
-"""
-
-
-def install_hook(path: str = ".") -> Path:
-    git_dir = Path(path).resolve() / ".git"
-    if not git_dir.is_dir():
-        raise SystemExit(f"govkit: {path} no es un repositorio git")
-    hook = git_dir / "hooks" / "pre-commit"
-    hook.parent.mkdir(parents=True, exist_ok=True)
-    if hook.exists() and "govkit" not in hook.read_text(encoding="utf-8", errors="ignore"):
-        hook.rename(hook.with_suffix(".pre-govkit"))
-    hook.write_text(HOOK, encoding="utf-8")
-    hook.chmod(hook.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    return hook

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================================
 #  govkit — instalador (macOS / Linux · compatible con bash 3.2)
-#  Uso:  cd ~/Downloads && tar xzf govkit-v1.1.2.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+#  Uso:  cd ~/Downloads && tar xzf govkit-v1.2.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 #  Opciones:
 #    --pull-model        descarga el modelo local en Ollama (si Ollama está instalado)
 #    --model NOMBRE      modelo por defecto (default: qwen2.5:7b-instruct)
@@ -132,6 +132,7 @@ alias gkg='govkit gate --to listo_para_produccion'
 alias gks='govkit score'
 alias gkr='govkit review'
 alias gka='govkit ask'
+alias gkp='govkit privado'
 # <<< govkit <<<
 EOF
   cat "$tmp" > "$rc"   # preserva symlinks de dotfiles
@@ -182,8 +183,17 @@ else
   say "Agentes MCP (Cursor, Claude Desktop…): govkit mcp --print-config"
 fi
 
-if [ -d "$LH/.git" ]; then
-  say "lakehousev2 es un repo git. Hook opcional de pre-commit: govkit hooks install \"$LH\""
+# ---------------------------------------------------------------------------------- 8. Privacidad en lakehousev2
+# Si lakehousev2 es un repo git, el kit queda ignorado LOCALMENTE (.git/info/exclude): nunca se sube al remoto.
+if git -C "$LH" rev-parse --git-dir >/dev/null 2>&1; then
+  EXC="$(git -C "$LH" rev-parse --git-path info/exclude)"
+  case "$EXC" in /*) ;; *) EXC="$LH/$EXC" ;; esac
+  REL="${TARGET#"$(cd "$(git -C "$LH" rev-parse --show-toplevel)" && pwd)"/}"
+  mkdir -p "$(dirname "$EXC")"; touch "$EXC"
+  for pat in "/$REL/" "/$REL.bak-*/"; do
+    grep -qxF "$pat" "$EXC" || printf '%s\n' "$pat" >> "$EXC"
+  done
+  ok "lakehousev2 es un repo git: el kit queda ignorado localmente (no se versiona ni se sube)"
 fi
 
 cat <<EOF
@@ -195,6 +205,8 @@ $(printf "\033[1;32m")Listo.$(printf "\033[0m") Ejecuta:  source ~/.zshrc
   govkit init --domain sales --subdomain transactions --type anl --country cl --owner tu.email@cencosud.com
   govkit gate --to listo_para_produccion              # dentro de un repo de Data Product
   govkit fix                                          # plan de auto-remediación segura (--apply para escribir)
+  govkit privado                                      # en cada repo: uso local, sin rastro en GitHub
+  govkit "revisa este repo y dime qué falta"          # abre Claude Code ya instruido para usar govkit
   govkit lint --format html -o reporte.html           # reporte autocontenido para compartir
   govkit kb route --task promover_a_produccion        # qué conocimiento carga el LLM
   govkit ask "¿qué exige el gate a producción?" --no-llm

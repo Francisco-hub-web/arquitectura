@@ -15,7 +15,7 @@ on:
       ruleset:
         description: "Versión del kit (tag del release del repo de arquitectura)"
         type: string
-        default: "v1.1.2"
+        default: "v1.2.0"
       fail_on:
         type: string
         default: "BLOCKER"

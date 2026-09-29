@@ -1,5 +1,23 @@
 # Changelog — govkit
 
+## 1.2.0 — 2026-09-29
+### Agregado
+- `govkit "texto libre"` (o `pbpaste | govkit`, `govkit -p "…"`): abre Claude Code en la carpeta actual con el
+  servidor MCP govkit, permisos previos para las herramientas de solo lectura, el contexto del repo y las reglas de
+  privacidad. Una sola palabra desconocida se trata como error (evita lanzar Claude por un typo).
+- `govkit privado [--check]`: uso local sin rastro en el remoto. Config y baseline personales en `.git/govkit/`
+  (se cargan solos), `.git/info/exclude` para archivos de govkit y guardias locales pre-commit / commit-msg / pre-push
+  que bloquean contenido, mensajes, ramas o commits con menciones a govkit (hooks previos encadenados).
+- Instalador: si `lakehousev2` es un repo git, el kit queda ignorado localmente; alias `gkp`.
+
+### Cambiado
+- Las plantillas y el ejemplo de referencia ya no mencionan la herramienta: lo que `init`/`fix` escriben en un repo
+  es solo el estándar corporativo. El `pr.yml` de plantilla usa únicamente el workflow corporativo reutilizable.
+- `govkit fix` nunca crea `.github/workflows/*` ni `CODEOWNERS` (disparan CI o revisores en el GitHub corporativo):
+  quedan como acción manual.
+- `govkit baseline` escribe por defecto en `.git/govkit/baseline.json`; `govkit hooks install` encadena hooks existentes.
+- El servidor MCP instruye al agente a no mencionar govkit en archivos, commits, ramas ni PRs.
+
 ## 1.1.2 — 2026-09-29
 ### Corregido
 - `govkit fix` en repos con nombre no estándar (p. ej. `forecast-derived-mdh-dp-cl`): las plantillas (ficha,

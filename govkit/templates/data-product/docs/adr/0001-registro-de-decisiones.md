@@ -11,4 +11,4 @@ Toda decisión técnica significativa (formato, nueva fuente, migración de serv
 Usar ADRs numerados (`NNNN-titulo.md`) con Contexto, Decisión y Consecuencias.
 
 ## Consecuencias
-Las excepciones a reglas de gobierno (`waivers` en `.govkit.yaml`) deben referenciar un ADR.
+Las excepciones a reglas de gobierno deben referenciar un ADR (motivo, responsable y vencimiento).

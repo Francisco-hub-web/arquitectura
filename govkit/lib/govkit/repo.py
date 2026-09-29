@@ -78,9 +78,15 @@ class RepoContext:
         self.base_ref = base_ref
         self.today = today or _dt.date.today()
         cfg_path = self.root / ".govkit.yaml"
+        if not cfg_path.exists():  # modo privado: configuración personal dentro de .git/ (nunca se sube)
+            from govkit.privacy import private_dir
+            pdir = private_dir(self.root) if (self.root / ".git").exists() or self._inside_git() else None
+            if pdir and (pdir / "config.yaml").exists():
+                cfg_path = pdir / "config.yaml"
         user_cfg = load_yaml_file(cfg_path) if cfg_path.exists() else {}
         self.config = _deep_merge(DEFAULT_CONFIG, user_cfg or {})
-        self.config_path = ".govkit.yaml" if cfg_path.exists() else None
+        self.config_path = (None if not cfg_path.exists() else
+                            ".govkit.yaml" if cfg_path.parent == self.root else str(cfg_path))
         self.artifact_globs: Dict[str, List[str]] = dict(catalog.get("artifacts", {}))
         self.artifact_globs.update(self.config.get("artifacts") or {})
         self.lifecycle = registry("lifecycle")
@@ -200,6 +206,9 @@ class RepoContext:
         return self.config["policies"]
 
     # ------------------------------------------------------------------ git
+    def _inside_git(self) -> bool:
+        return any((p / ".git").exists() for p in self.root.parents)
+
     def git(self, *args: str) -> Optional[str]:
         try:
             out = subprocess.run(["git", "-C", str(self.root), *args], capture_output=True, text=True, timeout=20)

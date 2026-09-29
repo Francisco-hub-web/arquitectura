@@ -6,4 +6,3 @@ modeling/dbt/dbt_packages/
 modeling/dbt/logs/
 .env
 *.local.yaml
-govkit-report.*

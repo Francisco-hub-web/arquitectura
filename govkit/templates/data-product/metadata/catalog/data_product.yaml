@@ -1,6 +1,6 @@
 # Ficha del Data Product — metadata as code (06-data-product-definition.md · 09 §10/§16 · 15 §18)
-# Estado inicial: en_definicion. Completar las marcas <COMPLETAR>; `govkit lint` indica qué exige cada etapa
-# y `govkit gate --to <estado>` muestra qué falta para avanzar.
+# Estado inicial: en_definicion. Completar las marcas <COMPLETAR>; cada etapa del ciclo de vida (18 §9) define
+# qué campos son exigibles antes de avanzar.
 apiVersion: cencosud.data/v1
 kind: DataProduct
 metadata:

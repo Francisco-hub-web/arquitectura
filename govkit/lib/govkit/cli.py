@@ -9,6 +9,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 from govkit import __version__
 
@@ -23,6 +24,13 @@ def _engine(args, packs, stage=None):
     ctx = RepoContext(args.path, catalog, stage_override=stage or getattr(args, "stage", None),
                       base_ref=getattr(args, "base", None))
     baseline = load_baseline(args.baseline) if getattr(args, "baseline", None) else None
+    if baseline is None and getattr(args, "baseline", "") is not False:
+        from govkit.privacy import private_dir
+        pdir = private_dir(ctx.root) if ctx.is_git else None
+        if pdir and (pdir / "baseline.json").exists():
+            baseline = load_baseline(str(pdir / "baseline.json"))
+            print(f"govkit: baseline personal activo ({len(baseline)} hallazgos preexistentes no cuentan · "
+                  f"{pdir / 'baseline.json'})", file=sys.stderr)
     only = [r.strip() for r in args.rules.split(",")] if getattr(args, "rules", None) else None
     return Engine(ctx, catalog, packs=packs, only=only, profile=getattr(args, "profile", None), baseline=baseline,
                   fail_on=getattr(args, "fail_on", "BLOCKER"), changed_only=getattr(args, "changed_only", False))
@@ -279,18 +287,61 @@ def cmd_doctor(args):
 
 
 def cmd_hooks(args):
-    from govkit.scaffold import install_hook
+    from govkit.privacy import install_hooks
 
-    path = install_hook(args.path)
-    print(f"✅ pre-commit instalado en {path}")
+    from govkit.privacy import VersionedHooksError
+    try:
+        hooks = install_hooks(Path(args.path), lint=True)
+    except VersionedHooksError as exc:
+        print(f"govkit: el repo usa hooks versionados ({exc}); no se instala para no modificar archivos que se suben.",
+              file=sys.stderr)
+        return 2
+    print(f"✅ pre-commit (lint BLOCKER) instalado en {hooks[0]} · hooks previos encadenados")
+    return 0
+
+
+def cmd_privado(args):
+    from govkit import privacy
+
+    root = Path(args.path).resolve()
+    if args.check:
+        issues = privacy.check(root)
+        if not issues:
+            print("✅ Sin rastros de govkit en archivos versionados, stage, ramas ni commits sin subir.")
+            return 0
+        print("⚠️  Rastros de govkit que podrían verse en el remoto:")
+        for i in issues:
+            print("   - " + i)
+        return 1
+    info = privacy.setup(root)
+    print(f"🔒 Modo privado activo en {root.name}")
+    print(f"   Config y baseline personales: {info['private_dir']}  (dentro de .git/: nunca se sube)")
+    print("   .git/info/exclude: " + (", ".join(info["excludes"]) if info["excludes"] else "ya configurado"))
+    if info.get("hooks_skipped"):
+        print(f"   ⚠️  Guardias NO instalados: el repo usa hooks versionados ({info['hooks_skipped']}); instalarlos\n"
+              "      modificaría archivos que se suben. Usa `govkit privado --check` antes de cada push.")
+    else:
+        print("   Guardias locales: " + ", ".join(h.name for h in info["hooks"])
+              + " → bloquean commits/push que mencionen govkit (hooks previos encadenados)")
+    print("   Verificar en cualquier momento: govkit privado --check")
     return 0
 
 
 def cmd_baseline(args):
+    from govkit import privacy
     from govkit.report import jsonr
 
+    args.baseline = False  # el baseline se calcula sobre TODOS los hallazgos actuales
     res = _engine(args, ["dp"]).run()
     data = jsonr.build(res)
+    if not args.output:
+        pdir = privacy.private_dir(res.ctx.root) if res.ctx.is_git else None
+        if pdir:
+            pdir.mkdir(parents=True, exist_ok=True)
+            privacy.ensure_excludes(res.ctx.root)
+            args.output = str(pdir / "baseline.json")
+        else:
+            args.output = ".govkit-baseline.json"
     Path(args.output).write_text(json.dumps({"violations": [{"fingerprint": v["fingerprint"], "rule_id": v["rule_id"],
                                                               "file": v["location"]["file"]} for v in data["violations"]]},
                                             ensure_ascii=False, indent=2), encoding="utf-8")
@@ -448,9 +499,15 @@ def parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("baseline", help="generar baseline de hallazgos existentes (adopción brownfield)")
     p.add_argument("path", nargs="?", default=".")
-    p.add_argument("--output", "-o", default=".govkit-baseline.json")
+    p.add_argument("--output", "-o", help="default: .git/govkit/baseline.json (personal, se carga solo)")
     p.add_argument("--stage")
     p.set_defaults(fn=cmd_baseline, format="json")
+
+    p = sub.add_parser("privado", aliases=["private"],
+                       help="uso local sin rastro en el remoto: config en .git/, exclude y guardias de commit/push")
+    p.add_argument("path", nargs="?", default=".")
+    p.add_argument("--check", action="store_true", help="buscar rastros de govkit que podrían llegar al remoto")
+    p.set_defaults(fn=cmd_privado)
 
     p = sub.add_parser("mcp", help="servidor MCP (stdio) para agentes: Claude Code, Cursor, Claude Desktop")
     p.add_argument("--print-config", action="store_true", help="mostrar cómo registrarlo en los clientes")
@@ -462,7 +519,36 @@ def parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _free_text(argv) -> Optional[int]:
+    """`govkit "texto libre"` o `pbpaste | govkit` → Claude Code con govkit. None si no aplica."""
+    from govkit import assistant
+
+    print_mode = bool(argv) and argv[0] in ("-p", "--print")
+    rest = argv[1:] if print_mode else argv
+    commands = {name for a in parser()._actions if isinstance(a, argparse._SubParsersAction)  # noqa: SLF001
+                for name in a.choices}
+    if not rest and not sys.stdin.isatty():
+        text = sys.stdin.read().strip()
+        return assistant.launch(text, print_mode=print_mode) if text else None
+    if not rest or rest[0] in commands or rest[0].startswith("-"):
+        return None
+    text = " ".join(rest).strip()
+    if len(text.split()) < 2:
+        print(f"govkit: comando desconocido `{text}`. Para hablar con Claude Code usa una frase entre comillas:\n"
+              f'        govkit "revisa este repo y dime qué falta"      (govkit --help para ver los comandos)',
+              file=sys.stderr)
+        return 2
+    return assistant.launch(text, print_mode=print_mode)
+
+
 def main(argv=None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    try:
+        free = _free_text(argv)
+    except KeyboardInterrupt:
+        return 130
+    if free is not None:
+        return free
     args = parser().parse_args(argv)
     try:
         return args.fn(args)

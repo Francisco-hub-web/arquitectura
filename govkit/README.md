@@ -15,7 +15,7 @@ Data & AI Discipline Framework de Cencosud. Arquitectura: `docs/00-SAD-sistema-g
 | `kb/` | 22 mini-contextos `KB_00 … KB_21` + `_graph.yaml` (dependencias, tareas, proyecciones) |
 | `templates/` | Esqueleto de repo de Data Product (`govkit init`) y workflow reusable de CI |
 | `examples/sales-transactions-anl-dp-cl/` | Data Product de referencia completo (PASS en gate a producción) |
-| `tests/` | 70 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado, fix, MCP, HTML) |
+| `tests/` | 77 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado, fix, MCP, HTML, modo privado, lanzador) |
 | `vendor/yaml` | PyYAML 6.0.1 puro Python (MIT) para instalación sin pip |
 
 ## Comandos
@@ -30,11 +30,20 @@ govkit omd-lint DIR | docs-lint DIR | portfolio DIR
 govkit kb list|show|route|pack|graph|validate [--task T] [-q "consulta"] [--files a,b] [--rules GOV-*] [--budget N] [--mode review|assist|qa]
 govkit review [path] [--base REF] [--dry-run] [--model qwen2.5:7b-instruct]
 govkit ask "pregunta" [--no-llm]            govkit doctor            govkit hooks install [path]            govkit selftest
+govkit "texto libre"  ·  pbpaste | govkit  ·  govkit -p "pregunta"      → Claude Code con govkit (MCP) y reglas de privacidad
+govkit privado [path] [--check]                                     → uso local sin rastro en el remoto
 ```
 
 Variables: `GOVKIT_MODEL` (default `qwen2.5:7b-instruct`), `GOVKIT_CTX` (default 8192), `OLLAMA_HOST`, `GOVKIT_PYTHON`, `NO_COLOR`.
 
-## Configuración por repositorio (`.govkit.yaml`)
+## Uso personal y privado
+
+`govkit privado` dentro de un repo deja todo lo de govkit en `.git/` (nunca se sube): config y baseline personales en
+`.git/govkit/`, archivos de govkit ignorados en `.git/info/exclude` y guardias locales que bloquean commits o pushes
+que mencionen govkit. `govkit privado --check` verifica que no haya rastros. Las plantillas que `init`/`fix` escriben
+no mencionan la herramienta, y `fix` no crea workflows de CI ni CODEOWNERS.
+
+## Configuración por repositorio (`.govkit.yaml` compartido o `.git/govkit/config.yaml` personal)
 
 ```yaml
 version: 1

@@ -18,14 +18,11 @@ Ver `spec.inputs` / `spec.outputs` en la ficha y los contratos en `contracts/inp
 Ver `spec.sla` en la ficha. Freshness, disponibilidad y ventana de publicación se monitorean en `observability/`.
 
 ## Branches y flujo de trabajo
-`<tipo>/<dominio>/<descripcion>` (feat|fix|hotfix|chore) · Conventional Commits · PR con `govkit lint` obligatorio.
+`<tipo>/<dominio>/<descripcion>` (feat|fix|hotfix|chore) · Conventional Commits · PR con validaciones de gobierno obligatorias.
 
 ## Runbook
 `docs/engineering/runbook.md`
 
 ## Gobernanza
-```bash
-govkit lint                          # motor determinista (reglas como código)
-govkit gate --to listo_para_produccion
-govkit review                        # revisión semántica con LLM local (consultiva)
-```
+Ficha del producto en `metadata/catalog/data_product.yaml`; contratos en `contracts/`; reglas de calidad en
+`quality/`; decisiones y excepciones en `docs/adr/` (Data & AI Discipline Framework).

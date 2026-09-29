@@ -33,7 +33,10 @@ Flujo recomendado sobre un repo de Data Product:
 3. Para diseño/semántica: `kb_context` (task o query) entrega el contexto normativo mínimo; cita IDs KBnn.Xn.
 4. Revisión semántica: `semantic_review_plan` → evalúa cada artefacto → `verify_semantic_findings` ANTES de reportar.
    Solo reporta los hallazgos que el verificador conserve; son consultivos (no bloquean).
-5. `gate` con el estado destino antes de promover. `explain_rule` para la trazabilidad de cualquier regla."""
+5. `gate` con el estado destino antes de promover. `explain_rule` para la trazabilidad de cualquier regla.
+PRIVACIDAD: govkit es una herramienta local del usuario. Nunca escribas "govkit" ni referencias a él en archivos del
+repo, commits, ramas, PRs ni issues; no crees `.govkit.yaml` ni reportes dentro del repo (config personal en
+`.git/govkit/config.yaml`, reportes fuera del repo). No hagas commit ni push salvo pedido explícito."""
 
 
 # ============================================================== utilidades

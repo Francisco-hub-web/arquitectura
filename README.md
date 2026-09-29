@@ -20,7 +20,7 @@ OpenMetadata) en un sistema ejecutable de dos capas:
 ## Instalación (macOS / Linux, en `lakehousev2`)
 
 ```bash
-cd ~/Downloads && tar xzf govkit-v1.1.2.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+cd ~/Downloads && tar xzf govkit-v1.2.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 ```
 
 El instalador detecta `~/lakehousev2` (o `LAKEHOUSE_DIR=/ruta ./install.sh`), instala en
@@ -44,6 +44,15 @@ govkit ask "¿cuándo un cambio de contrato es breaking?"
 govkit omd-lint <repo-access-analyzer>                    # roles cross-account OpenMetadata
 govkit docs-lint <carpeta-del-framework>                  # consistencia de la documentación
 govkit portfolio <carpeta-con-N-repos>                    # auditoría cross-repo
+```
+
+### Uso personal, sin rastro en GitHub
+
+```bash
+cd ~/ruta/a/mi-repo && govkit privado      # config/baseline en .git/, exclude y guardias de commit/push
+govkit "revisa este repo y dime qué me falta para producción"   # abre Claude Code ya instruido
+pbpaste | govkit                           # pega un error de CI, un SQL o una policy IAM
+govkit privado --check                     # verifica que no haya menciones a govkit en lo versionado
 ```
 
 ### Con Claude Code (MCP)

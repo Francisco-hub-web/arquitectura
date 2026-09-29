@@ -26,6 +26,9 @@ PLACEHOLDER = "<COMPLETAR>"
 _PLAIN = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_./@:+-]*$")
 _YAML_SPECIAL = {"true", "false", "yes", "no", "on", "off", "null", "~", "y", "n"}
 AUTO_KINDS = ("mkdir", "template", "set", "placeholder", "bump")
+# Archivos con efectos automáticos en el GitHub corporativo (ejecutan CI o asignan revisores obligatorios):
+# nunca se crean solos; quedan como acción manual para que el equipo use sus versiones corporativas.
+OUTWARD = ("CODEOWNERS", ".github/CODEOWNERS", ".github/workflows/")
 
 
 @dataclass
@@ -264,7 +267,10 @@ def plan(res, placeholders: bool = True, overrides: Optional[Dict[str, str]] = N
                 continue
             rx = [glob_to_regex(g) for g in expected]
             hit = next((p for p in templates if any(r.match(p) for r in rx) and not ctx.exists(p)), None)
-            if hit:
+            if hit and hit.startswith(OUTWARD):
+                add(Action("manual", hit, "crear con la versión corporativa del equipo (afecta CI/revisores del "
+                           "GitHub corporativo: no se genera automáticamente)", status="manual"), v.rule_id)
+            elif hit:
                 add(Action("template", hit, f"crear desde la plantilla corporativa `{hit}`"), v.rule_id)
             else:
                 add(Action("manual", target, "crear el archivo: no hay plantilla determinista para su contenido",
