@@ -20,7 +20,7 @@ OpenMetadata) en un sistema ejecutable de dos capas:
 ## Instalación (macOS / Linux, en `lakehousev2`)
 
 ```bash
-cd ~/Downloads && tar xzf govkit-v1.1.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+cd ~/Downloads && tar xzf govkit-v1.1.1.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 ```
 
 El instalador detecta `~/lakehousev2` (o `LAKEHOUSE_DIR=/ruta ./install.sh`), instala en
@@ -55,5 +55,5 @@ y `/mcp__govkit__consulta_framework`. Otros clientes MCP: `govkit mcp --print-co
 ## Construir el tarball
 
 ```bash
-./scripts/build-kit.sh          # → dist/govkit-v<MAJOR.MINOR>.tar.gz (incluye docs/ y MANIFEST)
+./scripts/build-kit.sh          # → dist/govkit-v<VERSION>.tar.gz (incluye docs/ y MANIFEST)
 ```

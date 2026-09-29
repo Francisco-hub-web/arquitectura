@@ -3,7 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="$(cat "$ROOT/govkit/VERSION")"
-SHORT="$(echo "$VERSION" | cut -d. -f1-2)"
+SHORT="$VERSION"
 OUT="$ROOT/dist/govkit-v${SHORT}.tar.gz"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT

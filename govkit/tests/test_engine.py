@@ -59,6 +59,29 @@ class TestMutations(unittest.TestCase):
         self.assertGreaterEqual(len(hits), 2)
         self.assertTrue(all(v.severity == "BLOCKER" and v.location.line > 20 for v in hits))
 
+    def test_secret_constants_and_spark_options(self):
+        job = "src/bronze/glue/job_brz_prd_sal_pos_transactions_cdc.py"
+
+        def fn(r):
+            p = r / job
+            p.write_text(p.read_text() + '\nDB_PASSWORD = "Sup3rS3cret!2026"\nSECRET_ID = "sales/pos/credentials"\n'
+                         'df = spark.read.format("jdbc").option("user", "etl").option("password", "EtlP4ss2026")\n'
+                         'spark.conf.set("fs.s3a.secret.key", "abcdEFGH1234")\n'
+                         'spark.conf.set("fs.s3a.endpoint", "s3.us-east-1.amazonaws.com")\n')
+        res = self.mutate_and_lint(fn)
+        text = (EXAMPLE / job).read_text()
+        base = text.count("\n") + 1
+        lines = sorted(v.location.line - base for v in res.counting if v.rule_id == "GOV-SEC-006")
+        self.assertEqual(lines, [1, 3, 4])  # constante, .option("password") y conf.set(secret) — no SECRET_ID ni endpoint
+
+    def test_iam_destructive_wildcard_on_shared_bucket_blocks(self):
+        def fn(r):
+            edit_json(r / POLICY, lambda d: d["PolicyDocument"]["Statement"].append(
+                {"Sid": "LimpiezaRapida", "Effect": "Allow", "Action": ["s3:DeleteObject"],
+                 "Resource": ["arn:aws:s3:::cencosud-datalake-shared-cl/*"]}))
+        v = next(v for v in self.mutate_and_lint(fn).counting if v.rule_id == "GOV-IAM-004")
+        self.assertEqual(v.severity, "BLOCKER")
+
     def test_iam_write_on_star_and_kms_wildcard(self):
         def fn(r):
             def m(d):

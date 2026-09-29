@@ -193,8 +193,12 @@ def write_wildcards(ctx, rule):
                         yield at(p.doc, p.spath(i, "Resource"), f"`{sid}`: wildcard de escritura sobre buckets no "
                                  f"exclusivos del producto (`{bucket}`)", severity="BLOCKER", resource=r)
                     elif "*" not in bucket and "*" in path and not exclusive_bucket(bucket, code, country):
+                        # Regla 2 del lineamiento IAM: una acción DESTRUCTIVA con wildcard en un recurso compartido
+                        # puede afectar a otros productos → BLOCKER; escritura no destructiva → HIGH.
+                        destructive = any(re.search(r"(?i)(^\*$|:\*$|delete)", str(a)) for a in _list(st.get("Action")))
                         yield at(p.doc, p.spath(i, "Resource"), f"`{sid}`: wildcard sobre path de bucket compartido "
-                                 f"`{r}` — usar recurso explícito", severity="HIGH", resource=r)
+                                 f"`{r}`{' con acción destructiva' if destructive else ''} — usar recurso explícito",
+                                 severity="BLOCKER" if destructive else "HIGH", resource=r)
                 m = re.match(r"^arn:aws:glue:[^:]*:[^:]*:(database|table)/([^/]+)", r)
                 if m and (m.group(2) == "*" or (code and "*" in m.group(2) and f"_{code}_" not in m.group(2))):
                     yield at(p.doc, p.spath(i, "Resource"), f"`{sid}`: escritura Glue sobre databases no exclusivas "

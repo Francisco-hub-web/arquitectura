@@ -1,5 +1,13 @@
 # Changelog — govkit
 
+## 1.1.1 — 2026-09-29
+### Corregido
+- GOV-SEC-006 detecta secretos en constantes y claves con prefijo/sufijo (`DB_PASSWORD = "…"`, `SNOWFLAKE_PWD`,
+  `"ApiKey": "…"`) y en opciones Spark/JDBC (`.option("password", "…")`, `spark.conf.set("fs.s3a.secret.key", "…")`);
+  ignora nombres que referencian al secreto (`secret_id`, `secret_arn`, `password_param`, `*_header`…).
+- GOV-IAM-004: una acción destructiva (`Delete*`, `s3:*`, `*`) con wildcard sobre el path de un bucket compartido es
+  BLOCKER (Regla 2 del lineamiento IAM); la escritura no destructiva sigue siendo HIGH.
+
 ## 1.1.0 — 2026-09-25
 ### Agregado
 - `govkit mcp`: servidor MCP stdio sin dependencias para agentes de código (Claude Code, Cursor, Claude Desktop).
@@ -14,7 +22,7 @@
   `MANIFEST` (restos de extracciones anteriores no se instalan). Desinstalador: quita el registro MCP.
 
 ### Cambiado
-- Tarball versionado por MAJOR.MINOR: `dist/govkit-v1.1.tar.gz`.
+- Tarball versionado: `dist/govkit-v<versión>.tar.gz` (desde 1.1.1 incluye el patch para evitar colisiones en Descargas).
 - Pista `shape` en los `fix` de tipo `set` (lista / mapa) para generar esqueletos con la forma correcta.
 
 ## 1.0.0 — 2026-09-25

@@ -14,10 +14,13 @@ SECRET_PATTERNS = [
     ("Token Slack", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}")),
     ("Credencial en URL JDBC", re.compile(r"(?i)jdbc:[^\s'\"]*password=[^&\s'\"$]{4,}")),
     ("Credencial en cadena de conexión", re.compile(r"(?i)\b[a-z+]+://[^\s:/'\"]+:[^\s@/'\"${]{4,}@")),
-    ("Secreto asignado en claro", re.compile(
-        r"(?i)\b(?:password|passwd|pwd|secret|client_secret|api_key|apikey|access_token|auth_token)\b"
-        r"\s*[:=]\s*['\"](?![$<{%])(?!os\.environ)[^'\"\s]{6,}['\"]")),
 ]
+# Asignación `nombre = "literal"` / `nombre: "literal"` cuyo nombre sugiere un secreto (DB_PASSWORD, snowflake_pwd,
+# ApiKey…), salvo nombres que referencian al secreto en vez de contenerlo (secret_id, secret_arn, password_param…).
+SECRET_ASSIGN = re.compile(r"""(?m)["']?\b([A-Za-z_][\w.-]*)["']?\s*[:=]\s*["'](?![$<{%])([^"'\s]{6,})["']""")
+SECRET_NAME = re.compile(r"(?i)(passw(or)?d|_pwd\b|\bpwd_|secret|api_?key|access_?token|auth_?token|private_?key)")
+SECRET_REF = re.compile(r"(?i)(_?(id|arn|name|path|ref|env|var|param|parameter|header|prefix|type|label|url|uri|"
+                        r"file|location|len|length|policy|rotation|manager|field|col|column|key_id))$")
 SECRET_KWARGS = {"password", "passwd", "aws_secret_access_key", "aws_session_token", "secret", "api_key",
                  "client_secret", "token"}
 PII_TOKENS = {"rut", "dni", "cedula", "cpf", "cuit", "cuil", "ruc", "curp", "pasaporte", "passport", "email",
@@ -92,12 +95,29 @@ def secrets_scan(ctx, rule):
                     seen.add(line)
                     yield at_file(rel, f"{label} en el código (línea {line}): usar Secrets Manager / variables seguras",
                                   line=line, secret_type=label)
+        for m in SECRET_ASSIGN.finditer(text):
+            name = m.group(1).rsplit(".", 1)[-1]
+            if SECRET_NAME.search(name) and not SECRET_REF.search(name):
+                line = line_of(text, m.start(1))
+                if line not in seen:
+                    seen.add(line)
+                    yield at_file(rel, f"Secreto asignado en claro a `{name}` (línea {line}): usar Secrets Manager / "
+                                  "variables seguras", line=line, secret_type="asignación")
         if rel.endswith(".py"):
             try:
                 tree = ast.parse(text)
             except SyntaxError:
                 continue
             for node in ast.walk(tree):
+                # Spark/JDBC: .option("password", "…") · spark.conf.set("fs.s3a.secret.key", "…") · .config(...)
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
+                        and node.func.attr in ("option", "set", "config", "setdefault") and len(node.args) >= 2 \
+                        and all(isinstance(a, ast.Constant) and isinstance(a.value, str) for a in node.args[:2]) \
+                        and SECRET_NAME.search(node.args[0].value) and not SECRET_REF.search(node.args[0].value) \
+                        and len(node.args[1].value) >= 4 and node.args[1].lineno not in seen:
+                    seen.add(node.args[1].lineno)
+                    yield at_file(rel, f"`.{node.func.attr}(\"{node.args[0].value}\", …)` con literal hardcodeado (AST)",
+                                  line=node.args[1].lineno, col=node.args[1].col_offset + 1, secret_type="option")
                 if isinstance(node, ast.keyword) and node.arg and node.arg.lower() in SECRET_KWARGS \
                         and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str) \
                         and len(node.value.value) >= 4 and node.value.lineno not in seen:
