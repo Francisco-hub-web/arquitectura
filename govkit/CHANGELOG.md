@@ -1,5 +1,16 @@
 # Changelog — govkit
 
+## 1.3.0 — 2026-09-29
+### Agregado
+- `govkit -p "texto"`: solo la respuesta en la terminal (Claude Code no interactivo, sin interfaz ni diálogo de
+  confianza), con una línea de progreso y formato legible. `govkit "texto"` sigue abriendo la sesión interactiva.
+- «Fuentes para verificar»: cada ID citado (GOV-*, KBnn.Xn) se resuelve de forma determinista a documento § sección y
+  cita textual del framework. En `-p` govkit lo agrega solo; en modo interactivo Claude usa la herramienta MCP
+  `sources`. Comando `govkit fuentes <IDs>` o `pbpaste | govkit fuentes` para verificar cualquier texto.
+- Notas reutilizables en `~/.govkit/notas/` (fuera de cualquier repo): cada respuesta `-p` se guarda sola;
+  `--nota N` la usa como contexto, `--sumar N` además le agrega la respuesta nueva; `govkit notas`
+  (lista · ver · copiar · exportar · abrir · borrar). En Claude Code: herramientas MCP `notes_*`.
+
 ## 1.2.0 — 2026-09-29
 ### Agregado
 - `govkit "texto libre"` (o `pbpaste | govkit`, `govkit -p "…"`): abre Claude Code en la carpeta actual con el

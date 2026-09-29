@@ -34,6 +34,8 @@ Flujo recomendado sobre un repo de Data Product:
 4. Revisión semántica: `semantic_review_plan` → evalúa cada artefacto → `verify_semantic_findings` ANTES de reportar.
    Solo reporta los hallazgos que el verificador conserve; son consultivos (no bloquean).
 5. `gate` con el estado destino antes de promover. `explain_rule` para la trazabilidad de cualquier regla.
+6. Termina cada respuesta con citas con «Fuentes para verificar» (herramienta `sources`: documento § sección y cita).
+   Si el usuario quiere guardar o retomar algo: `notes_save` / `notes_append` / `notes_list` / `notes_get`.
 PRIVACIDAD: govkit es una herramienta local del usuario. Nunca escribas "govkit" ni referencias a él en archivos del
 repo, commits, ramas, PRs ni issues; no crees `.govkit.yaml` ni reportes dentro del repo (config personal en
 `.git/govkit/config.yaml`, reportes fuera del repo). No hagas commit ni push salvo pedido explícito."""
@@ -231,6 +233,47 @@ def t_init_data_product(domain: str, subdomain: str, type="anl", country="cl", d
             "next": "Completa las marcas <COMPLETAR> con el usuario; `gate` muestra lo que exige cada etapa."}
 
 
+def t_sources(ids: List[str]):
+    from govkit import sources
+
+    found = sources.resolve_all(sources.extract_ids(" ".join(ids)))
+    return {"sources": found, "markdown": sources.render(found),
+            "note": "Incluye este bloque al final de tu respuesta para que el usuario pueda verificar cada criterio."}
+
+
+def t_notes_list(query=None):
+    from govkit import notes
+
+    items = [n for n in notes.all_notes() if not query or query.lower() in (str(n.get("titulo", "")) +
+                                                                           str(n["body"])).lower()]
+    return [{"id": n["id"], "fecha": n.get("fecha"), "repo": n.get("repo"), "titulo": n.get("titulo")} for n in items]
+
+
+def t_notes_get(id: int):
+    from govkit import notes
+
+    n = notes.get(int(id))
+    if not n:
+        raise ValueError(f"No existe la nota {id}")
+    return {"id": n["id"], "titulo": n.get("titulo"), "fecha": n.get("fecha"), "contenido": n["body"]}
+
+
+def t_notes_save(titulo: str, contenido: str, repo=None):
+    from govkit import notes
+
+    n = notes.save(titulo, contenido, repo=repo or os.path.basename(os.getcwd()), folder=os.getcwd())
+    return {"id": n["id"], "path": n["path"], "note": f"Guardada como nota #{n['id']} (fuera del repo)."}
+
+
+def t_notes_append(id: int, titulo: str, contenido: str):
+    from govkit import notes
+
+    n = notes.append(int(id), titulo, contenido)
+    if not n:
+        raise ValueError(f"No existe la nota {id}")
+    return {"id": n["id"], "note": f"Agregado a la nota #{n['id']}."}
+
+
 def _states() -> List[str]:
     from govkit.paths import registry
 
@@ -328,7 +371,33 @@ def tool_specs() -> List[Dict[str, Any]]:
     ]
 
 
+NOTE_TOOLS = [
+    {"name": "sources", "title": "Fuentes para verificar",
+     "description": "Resuelve IDs citados (GOV-XXX-NNN, KBnn.Xn, KB_nn) a documento § sección y cita textual del "
+                    "framework. Úsalo al final de cada respuesta con citas.",
+     "inputSchema": {"type": "object", "required": ["ids"], "properties": {"ids": {"type": "array", "items": {"type": "string"}}}},
+     "annotations": {"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False}},
+    {"name": "notes_list", "title": "Listar notas guardadas", "description": "Notas del usuario (~/.govkit/notas).",
+     "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}},
+     "annotations": {"readOnlyHint": True, "openWorldHint": False}},
+    {"name": "notes_get", "title": "Leer una nota", "description": "Contenido de una nota guardada para reutilizarla.",
+     "inputSchema": {"type": "object", "required": ["id"], "properties": {"id": {"type": "integer"}}},
+     "annotations": {"readOnlyHint": True, "openWorldHint": False}},
+    {"name": "notes_save", "title": "Guardar nota",
+     "description": "Guarda una respuesta o resumen como nota reutilizable (fuera del repo, en ~/.govkit/notas).",
+     "inputSchema": {"type": "object", "required": ["titulo", "contenido"],
+                     "properties": {"titulo": {"type": "string"}, "contenido": {"type": "string"}, "repo": {"type": "string"}}},
+     "annotations": {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}},
+    {"name": "notes_append", "title": "Sumar a una nota", "description": "Agrega contenido nuevo al final de una nota.",
+     "inputSchema": {"type": "object", "required": ["id", "titulo", "contenido"],
+                     "properties": {"id": {"type": "integer"}, "titulo": {"type": "string"}, "contenido": {"type": "string"}}},
+     "annotations": {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}},
+]
+
+
 TOOLS: Dict[str, Callable[..., Any]] = {
+    "sources": t_sources, "notes_list": t_notes_list, "notes_get": t_notes_get, "notes_save": t_notes_save,
+    "notes_append": t_notes_append,
     "lint": t_lint, "gate": t_gate, "score": t_score, "fix": t_fix, "explain_rule": t_explain_rule,
     "search_rules": t_search_rules, "kb_context": t_kb_context, "semantic_review_plan": t_semantic_review_plan,
     "verify_semantic_findings": t_verify_semantic_findings, "init_data_product": t_init_data_product,
@@ -460,7 +529,7 @@ def dispatch(method: str, params: Dict[str, Any], state: Dict[str, Any]) -> Any:
     if method in ("ping", "logging/setLevel"):
         return {}
     if method == "tools/list":
-        return {"tools": tool_specs()}
+        return {"tools": tool_specs() + NOTE_TOOLS}
     if method == "tools/call":
         name, args = params.get("name"), params.get("arguments") or {}
         fn = TOOLS.get(name)

@@ -364,6 +364,78 @@ def cmd_mcp(args):
     return serve()
 
 
+def cmd_notas(args):
+    import shutil
+    import subprocess
+
+    from govkit import notes
+
+    action, nid = args.accion, args.id
+    if action == "lista":
+        items = notes.all_notes()
+        if not items:
+            print('Sin notas aún. Se crean con: govkit -p "tu consulta"   (carpeta: ' + str(notes.notes_dir()) + ")")
+            return 0
+        for n in items:
+            print(f"#{n['id']:<4} {str(n.get('fecha', '')):<17} {str(n.get('repo', '')):<30.30} {n.get('titulo', '')}")
+        print(f"\n{len(items)} nota(s) · {notes.notes_dir()} · govkit notas ver N · copiar N · exportar")
+        return 0
+    if action == "abrir":
+        opener = shutil.which("open") or shutil.which("xdg-open")
+        target = str(notes.notes_dir() if nid is None else notes.get(nid)["path"])
+        return subprocess.call([opener, target]) if opener else (print(target) or 0)
+    if action == "exportar":
+        items = notes.all_notes() if nid is None else [notes.get(nid)]
+        text = notes.export([n for n in items if n])
+        if args.output:
+            Path(args.output).write_text(text, encoding="utf-8")
+            print(f"✅ {len(items)} nota(s) → {args.output}")
+        else:
+            sys.stdout.write(text)
+        return 0
+    if nid is None:
+        print(f"govkit: indica el número de nota: govkit notas {action} N", file=sys.stderr)
+        return 2
+    note = notes.get(nid)
+    if not note:
+        print(f"govkit: no existe la nota {nid}", file=sys.stderr)
+        return 2
+    if action == "ver":
+        print(f"# #{note['id']} · {note.get('titulo', '')}  ({note.get('fecha', '')} · {note.get('repo', '')})\n")
+        sys.stdout.write(str(note["body"]))
+        return 0
+    if action == "copiar":
+        copier = shutil.which("pbcopy") or shutil.which("wl-copy") or shutil.which("xclip")
+        body = str(note["body"])
+        if not copier:
+            sys.stdout.write(body)
+            return 0
+        cmd = [copier] + (["-selection", "clipboard"] if copier.endswith("xclip") else [])
+        subprocess.run(cmd, input=body, text=True, check=False)
+        print(f"📋 Nota #{nid} copiada al portapapeles")
+        return 0
+    if action == "borrar":
+        notes.delete(nid)
+        print(f"🗑  Nota #{nid} eliminada")
+        return 0
+    return 2
+
+
+def cmd_fuentes(args):
+    from govkit import sources
+
+    text = " ".join(args.ids) if args.ids else (sys.stdin.read() if not sys.stdin.isatty() else "")
+    entries = sources.resolve_all(sources.extract_ids(text))
+    if not entries:
+        print("govkit: no encontré IDs de reglas (GOV-XXX-NNN) ni criterios (KBnn.Xn) que resolver.", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        print(json.dumps(entries, ensure_ascii=False, indent=2))
+    else:
+        sys.stdout.write(sources.render(entries, markdown=False))
+    return 0
+
+
 def cmd_selftest(args):
     import unittest
 
@@ -392,8 +464,15 @@ def _common_lint(p, with_path=True):
 
 
 def parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="govkit", description="Sistema de Gobernanza Híbrido de Datos: motor determinista "
-                                 "(reglas como código) + base de conocimiento modular para LLM local.")
+    ap = argparse.ArgumentParser(
+        prog="govkit", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Sistema de Gobernanza Híbrido de Datos: motor determinista (reglas como código) + base de "
+                    "conocimiento modular para LLM local.",
+        epilog='Consultas con Claude Code:\n'
+               '  govkit "¿qué le falta a mi data product?"      sesión interactiva\n'
+               '  govkit -p "¿qué le falta a mi data product?"   solo la respuesta + fuentes (se guarda en govkit notas)\n'
+               '  govkit -p --sumar 3 "y qué le pido a cada uno" retoma la nota 3 y le suma la respuesta\n'
+               '  pbpaste | govkit -p                            pega un error, SQL o YAML')
     ap.add_argument("--version", action="version", version=f"govkit {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -509,6 +588,20 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--check", action="store_true", help="buscar rastros de govkit que podrían llegar al remoto")
     p.set_defaults(fn=cmd_privado)
 
+    p = sub.add_parser("notas", aliases=["notes"], help="respuestas guardadas: lista | ver N | copiar N | borrar N | "
+                       "exportar [N] | abrir [N]")
+    p.add_argument("accion", nargs="?", default="lista",
+                   choices=["lista", "ver", "copiar", "borrar", "exportar", "abrir"])
+    p.add_argument("id", nargs="?", type=int)
+    p.add_argument("--output", "-o", help="archivo destino para exportar")
+    p.set_defaults(fn=cmd_notas)
+
+    p = sub.add_parser("fuentes", aliases=["sources"], help="documento § sección y cita de reglas/criterios citados "
+                       "(IDs o texto pegado por stdin)")
+    p.add_argument("ids", nargs="*", help="GOV-XXX-NNN, KBnn.Xn o KB_nn (o texto que los contenga)")
+    p.add_argument("--format", choices=["text", "json"], default="text")
+    p.set_defaults(fn=cmd_fuentes)
+
     p = sub.add_parser("mcp", help="servidor MCP (stdio) para agentes: Claude Code, Cursor, Claude Desktop")
     p.add_argument("--print-config", action="store_true", help="mostrar cómo registrarlo en los clientes")
     p.set_defaults(fn=cmd_mcp)
@@ -520,25 +613,52 @@ def parser() -> argparse.ArgumentParser:
 
 
 def _free_text(argv) -> Optional[int]:
-    """`govkit "texto libre"` o `pbpaste | govkit` → Claude Code con govkit. None si no aplica."""
+    """`govkit "texto"` → Claude Code interactivo con govkit · `-p` → solo la respuesta (con fuentes, guardada como
+    nota) · `--nota N` reutiliza una nota como contexto · `--sumar N` además le agrega la respuesta. None si es un
+    comando normal."""
     from govkit import assistant
 
-    print_mode = bool(argv) and argv[0] in ("-p", "--print")
-    rest = argv[1:] if print_mode else argv
+    opts = {"interactive": True, "note_ids": [], "sumar": None, "guardar": True}
+    rest = list(argv)
+    try:
+        while rest and rest[0].startswith("-") and rest[0] not in ("-h", "--help", "--version"):
+            flag = rest.pop(0)
+            if flag in ("-p", "--print", "--solo"):
+                opts["interactive"] = False
+            elif flag in ("-i", "--interactivo", "--chat"):
+                opts["interactive"] = True
+            elif flag == "--nota":
+                opts["note_ids"].append(int(rest.pop(0)))
+            elif flag == "--sumar":
+                opts["sumar"] = int(rest.pop(0))
+                opts["interactive"] = False
+            elif flag == "--no-guardar":
+                opts["guardar"] = False
+            else:
+                return None  # opción de otro comando → argparse
+    except (IndexError, ValueError):
+        print("govkit: --nota y --sumar requieren el número de nota (govkit notas para verlas)", file=sys.stderr)
+        return 2
+    had_flag = len(rest) != len(argv)
     commands = {name for a in parser()._actions if isinstance(a, argparse._SubParsersAction)  # noqa: SLF001
                 for name in a.choices}
-    if not rest and not sys.stdin.isatty():
-        text = sys.stdin.read().strip()
-        return assistant.launch(text, print_mode=print_mode) if text else None
+    if not rest and (had_flag or not sys.stdin.isatty()):
+        text = sys.stdin.read().strip() if not sys.stdin.isatty() else ""
+        if text:
+            return assistant.launch(text, **opts)
+        if had_flag:
+            print('govkit: falta la consulta. Ej.: govkit -p "¿qué le falta a mi data product?"', file=sys.stderr)
+            return 2
+        return None
     if not rest or rest[0] in commands or rest[0].startswith("-"):
         return None
     text = " ".join(rest).strip()
     if len(text.split()) < 2:
-        print(f"govkit: comando desconocido `{text}`. Para hablar con Claude Code usa una frase entre comillas:\n"
-              f'        govkit "revisa este repo y dime qué falta"      (govkit --help para ver los comandos)',
+        print(f"govkit: comando desconocido `{text}`. Para consultar usa una frase entre comillas:\n"
+              f'        govkit "¿qué le falta a mi data product?"      (govkit --help para ver los comandos)',
               file=sys.stderr)
         return 2
-    return assistant.launch(text, print_mode=print_mode)
+    return assistant.launch(text, **opts)
 
 
 def main(argv=None) -> int:

@@ -1,2 +1,2 @@
 """govkit — Sistema de Gobernanza Híbrido de Datos (motor determinista + KB para LLM local)."""
-__version__ = "1.2.0"
+__version__ = "1.3.0"

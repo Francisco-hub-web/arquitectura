@@ -124,41 +124,132 @@ class TestPrivateMode(unittest.TestCase):
             self.assertFalse(any(k == "template" and ("CODEOWNERS" in f or "workflows" in f) for k, f in actions))
 
 
-class TestAssistantLauncher(unittest.TestCase):
-    def test_command_layout(self):
-        cmd = assistant.build_command("claude", "-x error pegado", Path("."), registered=False)
-        self.assertEqual(cmd[1], "Consulta: -x error pegado")        # posicional antes de opciones variádicas
-        self.assertIn("--mcp-config", cmd)
-        self.assertLess(cmd.index("--mcp-config"), cmd.index("--allowedTools"))
-        self.assertEqual(cmd[-2], "--allowedTools")                    # nada después que pueda tragarse
-        guide = cmd[cmd.index("--append-system-prompt") + 1]
-        self.assertIn("PRIVACIDAD", guide)
-        self.assertNotIn("--mcp-config", assistant.build_command("claude", "hola mundo", Path("."), registered=True))
-        self.assertEqual(assistant.build_command("claude", "a b", Path("."), print_mode=True, registered=True)[1], "-p")
+FAKE_CLAUDE = """#!{py}
+import sys, json
+if sys.argv[1:3] == ["mcp", "get"]:
+    sys.exit(0)
+open({log!r}, "a").write(json.dumps(sys.argv[1:]) + "\\n")
+if "-p" in sys.argv:  # imita --output-format stream-json de Claude Code
+    for ev in [{{"type": "system", "subtype": "init"}},
+               {{"type": "assistant", "message": {{"content": [{{"type": "tool_use", "name": "mcp__govkit__lint",
+                                                                  "input": {{"path": "."}}}}]}}}},
+               {{"type": "assistant", "message": {{"content": [{{"type": "text", "text": "pensando en voz alta"}}]}}}},
+               {{"type": "result", "subtype": "success", "is_error": False,
+                 "result": "## Falta la ficha\\n- Crea **metadata/catalog/data_product.yaml** con `govkit fix --apply`"}}]:
+        print(json.dumps(ev), flush=True)
+"""
 
-    def test_free_text_dispatch(self):
-        with TempDir() as tmp:
-            log = Path(tmp) / "log.json"
-            fake = Path(tmp) / "claude"
-            fake.write_text(f"#!{sys.executable}\nimport sys, json\n"
-                            "if sys.argv[1:3] == ['mcp', 'get']: sys.exit(0)\n"
-                            f"open({str(log)!r}, 'a').write(json.dumps(sys.argv[1:]) + '\\n')\n")
-            fake.chmod(0o755)
-            old = os.environ.get("GOVKIT_CLAUDE")
-            os.environ["GOVKIT_CLAUDE"] = str(fake)
-            try:
-                self.assertEqual(quiet(cli.main, ["revisa", "este", "repo"]), 0)
-                self.assertEqual(quiet(cli.main, ["-p", "qué exige el gate"]), 0)
-                self.assertEqual(quiet(cli.main, ["hola"]), 2)          # una palabra: probablemente un typo
-            finally:
-                if old is None:
-                    os.environ.pop("GOVKIT_CLAUDE", None)
-                else:
-                    os.environ["GOVKIT_CLAUDE"] = old
-            calls = [json.loads(l) for l in log.read_text().splitlines()]
-            self.assertIn("revisa este repo", calls[0][0:2])
-            self.assertEqual(calls[1][:2], ["-p", "qué exige el gate"])
-            self.assertNotIn("--mcp-config", calls[0])                 # ya registrado → no se duplica
+
+FAKE_CLAUDE = """#!{py}
+import sys, json
+if sys.argv[1:3] == ["mcp", "get"]:
+    sys.exit(0)
+open({log!r}, "a").write(json.dumps(sys.argv[1:]) + "\\n")
+if "-p" in sys.argv:  # imita `--output-format stream-json` de Claude Code
+    for ev in [{{"type": "system", "subtype": "init"}},
+               {{"type": "assistant", "message": {{"content": [{{"type": "tool_use", "name": "mcp__govkit__lint",
+                                                                  "input": {{"path": "."}}}}]}}}},
+               {{"type": "assistant", "message": {{"content": [{{"type": "text", "text": "pensando en voz alta"}}]}}}},
+               {{"type": "result", "subtype": "success", "is_error": False,
+                 "result": "## Falta la ficha\\n- **GOV-DPD-001**: crea la ficha (`govkit fix --apply`); Definition of Ready KB04.R5"}}]:
+        print(json.dumps(ev), flush=True)
+"""
+
+
+class _TTY(io.StringIO):
+    def isatty(self):
+        return True
+
+
+class TestAssistantLauncher(unittest.TestCase):
+    def setUp(self):
+        self.tmp = TempDir().__enter__()
+        self.log = Path(self.tmp) / "log.json"
+        fake = Path(self.tmp) / "claude"
+        fake.write_text(FAKE_CLAUDE.format(py=sys.executable, log=str(self.log)))
+        fake.chmod(0o755)
+        self.env = {k: os.environ.get(k) for k in ("GOVKIT_CLAUDE", "GOVKIT_NOTES_DIR")}
+        os.environ["GOVKIT_CLAUDE"] = str(fake)
+        os.environ["GOVKIT_NOTES_DIR"] = str(Path(self.tmp) / "notas")
+
+    def tearDown(self):
+        for k, v in self.env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def calls(self):
+        return [json.loads(l) for l in self.log.read_text().splitlines()]
+
+    def main(self, argv):
+        out = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(io.StringIO()):
+            rc = cli.main(argv)
+        return rc, out.getvalue()
+
+    def test_command_layout(self):
+        direct = assistant.build_command("claude", "-x error pegado", Path("."), registered=False)
+        self.assertEqual(direct[1:3], ["-p", "Consulta: -x error pegado"])  # texto antes de opciones variádicas
+        self.assertIn("--mcp-config", direct)
+        self.assertEqual(direct[direct.index("--output-format") + 1], "stream-json")
+        self.assertEqual(direct[-2], "--allowedTools")                         # nada después que pueda tragarse
+        self.assertIn("Read", direct[-1])
+        self.assertNotIn("notes_save", direct[-1])                             # en -p la nota la guarda govkit
+        guide = direct[direct.index("--append-system-prompt") + 1]
+        self.assertIn("PRIVACIDAD", guide)
+        self.assertIn("RESPUESTA DIRECTA", guide)
+        inter = assistant.build_command("claude", "hola mundo", Path("."), interactive=True, registered=True)
+        self.assertEqual(inter[1], "hola mundo")
+        self.assertNotIn("--output-format", inter)
+        self.assertIn("mcp__govkit__notes_save", inter[-1])
+        self.assertIn("Fuentes para verificar", inter[inter.index("--append-system-prompt") + 1])
+
+    def test_interactive_is_default(self):
+        from unittest import mock
+        with mock.patch("sys.stdin", _TTY()):
+            rc, _ = self.main(["revisa", "este", "repo"])
+            self.assertEqual(rc, 0)
+            self.assertEqual(self.main(["-p"])[0], 2)                         # flag sin consulta
+        self.assertEqual(self.calls()[0][0], "revisa este repo")               # sin -p → sesión interactiva
+        self.assertEqual(self.main(["hola"])[0], 2)                             # una palabra: probablemente un typo
+        for argv in (["--version"], ["-h"]):                                   # opciones globales no lanzan Claude
+            with self.assertRaises(SystemExit):
+                self.main(argv)
+        self.assertEqual(len(self.calls()), 1)
+
+    def test_answer_only_with_verifiable_sources_and_notes(self):
+        rc, out = self.main(["-p", "qué le falta a mi data product"])
+        self.assertEqual(rc, 0)
+        self.assertIn("Falta la ficha", out)
+        self.assertIn("Fuentes para verificar", out)
+        self.assertIn("06-data-product-definition.md §26", out)                # KB04.R5 → documento y sección
+        self.assertIn("01-data-principles.md §3", out)                         # GOV-DPD-001 → fuente del catálogo
+        self.assertNotIn("pensando en voz alta", out)                          # sin narración intermedia
+        self.assertNotIn('{"type"', out)                                       # sin JSON crudo
+        self.assertEqual(self.calls()[0][:2], ["-p", "qué le falta a mi data product"])
+        from govkit import notes
+        self.assertIn("Fuentes para verificar", str(notes.get(1)["body"]))
+        rc, _ = self.main(["-p", "--sumar", "1", "y qué le pido a cada uno"])
+        self.assertEqual(rc, 0)
+        self.assertIn('<nota id="1"', self.calls()[1][1])                      # la nota viaja como contexto
+        self.assertIn("y qué le pido a cada uno", str(notes.get(1)["body"]))    # y se le suma la respuesta
+        self.assertEqual(len(notes.all_notes()), 1)
+        self.assertIn("#1", self.main(["notas"])[1])
+        self.assertIn("Falta la ficha", self.main(["notas", "ver", "1"])[1])
+        self.assertEqual(self.main(["-p", "--nota", "9", "algo nuevo aquí"])[0], 2)  # nota inexistente
+
+    def test_mcp_sources_and_notes(self):
+        from govkit import mcpserver
+        src = mcpserver.t_sources(["KB04.R5", "GOV-IAM-004"])
+        self.assertIn("06-data-product-definition.md §26", src["markdown"])
+        self.assertIn("Regla 2", src["markdown"])
+        saved = mcpserver.t_notes_save("preguntas al owner", "1. ¿Quién es el business owner?")
+        mcpserver.t_notes_append(saved["id"], "arquitecto", "2. ¿Batch o streaming?")
+        self.assertIn("Batch", mcpserver.t_notes_get(saved["id"])["contenido"])
+        self.assertEqual(mcpserver.t_notes_list("owner")[0]["id"], saved["id"])
 
 
 if __name__ == "__main__":
