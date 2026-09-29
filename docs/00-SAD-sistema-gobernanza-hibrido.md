@@ -1,6 +1,6 @@
 # Sistema de Gobernanza Híbrido de Datos — Documento de Arquitectura de Solución (SAD)
 
-Versión: 1.1 (govkit 1.3.0: MCP, auto-remediación, reporte HTML, modo privado, fuentes verificables y notas)
+Versión: 1.1 (govkit 1.4.0: MCP, auto-remediación, reporte HTML, modo privado, fuentes verificables, notas y verificación de criterios)
 Estado: Propuesta para revisión del Equipo de Arquitectura de Datos Regional
 Fecha: 2026-09-25
 Alcance: Corporativo (aplicable a todos los repositorios de Data Products y al repositorio `access-analyzer`)
@@ -22,7 +22,7 @@ Este documento propone convertirla en un **Sistema de Gobernanza Híbrido** con 
 > Solo la superficie que requiere interpretación llega a un LLM local, con un contexto mínimo y verificable (consultivo).
 > Lo organizacional queda como checklist humano explícito.
 
-Resultados medidos sobre la implementación de referencia (`govkit` v1.3.0):
+Resultados medidos sobre la implementación de referencia (`govkit` v1.4.0):
 
 | Indicador | Valor |
 |---|---|
@@ -36,7 +36,7 @@ Resultados medidos sobre la implementación de referencia (`govkit` v1.3.0):
 | Latencia del motor determinista (repo de referencia, 73 archivos) | ≈0,5 s |
 | Superficies de integración | CLI · pre-commit · CI (SARIF / JSON / HTML) · **MCP para agentes de código** (10 herramientas) |
 | Auto-remediación segura (`govkit fix`) | carpetas, plantillas, valores deterministas, semver, esqueleto `<COMPLETAR>` · ≈1 s |
-| Pruebas automatizadas del kit | 79 (Python 3.9 → 3.13) |
+| Pruebas automatizadas del kit | 84 (Python 3.9 → 3.13) |
 
 El corpus documental completo (~19 páginas más lineamientos; del orden de decenas de miles de tokens, estimado) no cabe
 en la ventana útil de un modelo local 7B–14B y, aun si cupiera, diluiría la atención del modelo. La modularización
@@ -629,6 +629,7 @@ Durante la adopción, govkit funciona como apoyo **local** del desarrollador sin
 | `govkit "texto"` / `govkit -p "texto"` | Claude Code interactivo, o solo la respuesta (no interactivo), con el MCP govkit, lectura preaprobada, contexto del repo y reglas de privacidad |
 | «Fuentes para verificar» | cada ID citado se resuelve de forma determinista a documento § sección y cita (`govkit fuentes`, herramienta MCP `sources`) |
 | Notas (`~/.govkit/notas`) | respuestas reutilizables fuera de cualquier repo: `--nota N`, `--sumar N`, `govkit notas` |
+| `govkit verificar "…"` | ¿existe un criterio escuchado? recuperación determinista + veredicto del LLM acotado a esa evidencia + alerta de IDs inexistentes |
 | Plantillas neutrales | lo que `init`/`fix` escriben es solo el estándar corporativo (sin mencionar la herramienta) |
 | `fix` sin efectos externos | no crea workflows de CI ni `CODEOWNERS` (disparan ejecuciones o revisores en el GitHub corporativo) |
 | `.git/govkit/` | config y baseline personales dentro de `.git/` (nunca se versionan) |
@@ -758,6 +759,6 @@ arquitectura/
     │                fixer [govkit fix], mcpserver [govkit mcp], cli)
     ├── templates/data-product/ · templates/github/
     ├── examples/sales-transactions-anl-dp-cl/   ← Data Product de referencia (PASS en gate)
-    ├── tests/ (79 pruebas + fixtures omd/docs/portfolio)
+    ├── tests/ (84 pruebas + fixtures omd/docs/portfolio)
     └── vendor/yaml (PyYAML puro, MIT)
 ```

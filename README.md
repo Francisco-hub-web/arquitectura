@@ -20,7 +20,7 @@ OpenMetadata) en un sistema ejecutable de dos capas:
 ## Instalación (macOS / Linux, en `lakehousev2`)
 
 ```bash
-cd ~/Downloads && tar xzf govkit-v1.3.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+cd ~/Downloads && tar xzf govkit-v1.4.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 ```
 
 El instalador detecta `~/lakehousev2` (o `LAKEHOUSE_DIR=/ruta ./install.sh`), instala en
@@ -54,6 +54,7 @@ govkit "revisa este repo y dime qué me falta para producción"   # Claude Code 
 govkit -p "¿qué le falta a mi data product?"   # solo la respuesta + «Fuentes para verificar» (doc § sección)
 govkit -p --sumar 1 "y qué le pido a cada uno" # retoma la nota 1 y le suma la respuesta
 govkit notas                               # respuestas guardadas en ~/.govkit/notas (ver/copiar/exportar)
+govkit verificar "en la reu dijeron que el owner puede ser un buzón"   # ¿existe ese criterio? veredicto + fuentes
 pbpaste | govkit                           # pega un error de CI, un SQL o una policy IAM
 govkit privado --check                     # verifica que no haya menciones a govkit en lo versionado
 ```

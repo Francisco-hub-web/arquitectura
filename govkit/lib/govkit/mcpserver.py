@@ -35,6 +35,8 @@ Flujo recomendado sobre un repo de Data Product:
    Solo reporta los hallazgos que el verificador conserve; son consultivos (no bloquean).
 5. `gate` con el estado destino antes de promover. `explain_rule` para la trazabilidad de cualquier regla.
 6. Termina cada respuesta con citas con «Fuentes para verificar» (herramienta `sources`: documento § sección y cita).
+7. Preguntas libres sobre si un criterio existe (p.ej. algo oído en una reunión): `criteria_search` y veredicto
+   EXISTE / EXISTE CON MATICES / NO EXISTE / CONTRADICE; no corras `lint` si la pregunta no es sobre el repo.
    Si el usuario quiere guardar o retomar algo: `notes_save` / `notes_append` / `notes_list` / `notes_get`.
 PRIVACIDAD: govkit es una herramienta local del usuario. Nunca escribas "govkit" ni referencias a él en archivos del
 repo, commits, ramas, PRs ni issues; no crees `.govkit.yaml` ni reportes dentro del repo (config personal en
@@ -241,6 +243,14 @@ def t_sources(ids: List[str]):
             "note": "Incluye este bloque al final de tu respuesta para que el usuario pueda verificar cada criterio."}
 
 
+def t_criteria_search(text: str, k: int = 10):
+    from govkit import claims
+
+    return {"candidatos": claims.candidates(text, k=int(k)),
+            "note": "Búsqueda determinista. Emite veredicto EXISTE / EXISTE CON MATICES / NO EXISTE / CONTRADICE "
+                    "usando solo estos IDs (o los de kb_context/search_rules) y cita la fuente de cada uno."}
+
+
 def t_notes_list(query=None):
     from govkit import notes
 
@@ -372,6 +382,12 @@ def tool_specs() -> List[Dict[str, Any]]:
 
 
 NOTE_TOOLS = [
+    {"name": "criteria_search", "title": "¿Existe este criterio?",
+     "description": "Dada una afirmación (p.ej. algo escuchado en una reunión), devuelve los criterios KB y reglas GOV-* "
+                    "más cercanos con documento § sección y cita, para verificar si el criterio existe en el framework.",
+     "inputSchema": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string"},
+                                                                             "k": {"type": "integer", "default": 10}}},
+     "annotations": {"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False}},
     {"name": "sources", "title": "Fuentes para verificar",
      "description": "Resuelve IDs citados (GOV-XXX-NNN, KBnn.Xn, KB_nn) a documento § sección y cita textual del "
                     "framework. Úsalo al final de cada respuesta con citas.",
@@ -396,7 +412,7 @@ NOTE_TOOLS = [
 
 
 TOOLS: Dict[str, Callable[..., Any]] = {
-    "sources": t_sources, "notes_list": t_notes_list, "notes_get": t_notes_get, "notes_save": t_notes_save,
+    "sources": t_sources, "criteria_search": t_criteria_search, "notes_list": t_notes_list, "notes_get": t_notes_get, "notes_save": t_notes_save,
     "notes_append": t_notes_append,
     "lint": t_lint, "gate": t_gate, "score": t_score, "fix": t_fix, "explain_rule": t_explain_rule,
     "search_rules": t_search_rules, "kb_context": t_kb_context, "semantic_review_plan": t_semantic_review_plan,

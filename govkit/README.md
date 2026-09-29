@@ -15,7 +15,7 @@ Data & AI Discipline Framework de Cencosud. Arquitectura: `docs/00-SAD-sistema-g
 | `kb/` | 22 mini-contextos `KB_00 … KB_21` + `_graph.yaml` (dependencias, tareas, proyecciones) |
 | `templates/` | Esqueleto de repo de Data Product (`govkit init`) y workflow reusable de CI |
 | `examples/sales-transactions-anl-dp-cl/` | Data Product de referencia completo (PASS en gate a producción) |
-| `tests/` | 79 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado, fix, MCP, HTML, modo privado, lanzador) |
+| `tests/` | 84 pruebas (motor, packs, reportes, KB, revisor LLM con Ollama simulado, fix, MCP, HTML, modo privado, lanzador) |
 | `vendor/yaml` | PyYAML 6.0.1 puro Python (MIT) para instalación sin pip |
 
 ## Comandos
@@ -33,6 +33,7 @@ govkit ask "pregunta" [--no-llm]            govkit doctor            govkit hook
 govkit "texto libre"  ·  pbpaste | govkit                             → Claude Code interactivo con govkit (MCP)
 govkit -p "pregunta" [--nota N | --sumar N] [--no-guardar]          → solo la respuesta + fuentes, guardada como nota
 govkit notas [ver|copiar|exportar|abrir|borrar] [N]  ·  govkit fuentes <IDs> (o pbpaste | govkit fuentes)
+govkit verificar "lo que escuché en la reunión" [--sin-ia]        → ¿existe ese criterio? veredicto + fuentes
 govkit privado [path] [--check]                                     → uso local sin rastro en el remoto
 ```
 

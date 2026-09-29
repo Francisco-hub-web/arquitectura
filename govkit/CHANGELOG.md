@@ -1,5 +1,14 @@
 # Changelog — govkit
 
+## 1.4.0 — 2026-09-29
+### Agregado
+- `govkit verificar "lo que escuché"` (alias `existe`): ¿ese criterio existe en el framework? Recuperación
+  determinista de criterios KB y reglas GOV-* (BM25 con normalización de plurales y sinónimos frecuentes), veredicto
+  EXISTE · EXISTE CON MATICES · NO EXISTE · CONTRADICE vía Claude Code restringido a esa evidencia, fuentes resueltas
+  por govkit y alerta si se cita un ID inexistente. `--sin-ia` muestra solo los criterios más cercanos; se guarda
+  como nota. Herramienta MCP `criteria_search` para hacer lo mismo desde la sesión interactiva.
+- Las preguntas libres (`govkit "…"` / `-p`) ya no evalúan el repo si la pregunta no es sobre él.
+
 ## 1.3.0 — 2026-09-29
 ### Agregado
 - `govkit -p "texto"`: solo la respuesta en la terminal (Claude Code no interactivo, sin interfaz ni diálogo de

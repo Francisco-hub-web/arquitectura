@@ -436,6 +436,20 @@ def cmd_fuentes(args):
     return 0
 
 
+def cmd_verificar(args):
+    from govkit import claims
+
+    claim = " ".join(args.afirmacion).strip() or (sys.stdin.read().strip() if not sys.stdin.isatty() else "")
+    if not claim:
+        print('govkit: indica la afirmación. Ej.: govkit verificar "el owner puede ser un buzón genérico"',
+              file=sys.stderr)
+        return 2
+    if args.format == "json":
+        print(json.dumps({"afirmacion": claim, "candidatos": claims.candidates(claim)}, ensure_ascii=False, indent=2))
+        return 0
+    return claims.verify(claim, use_llm=not args.sin_ia, save=not args.no_guardar)
+
+
 def cmd_selftest(args):
     import unittest
 
@@ -472,7 +486,8 @@ def parser() -> argparse.ArgumentParser:
                '  govkit "¿qué le falta a mi data product?"      sesión interactiva\n'
                '  govkit -p "¿qué le falta a mi data product?"   solo la respuesta + fuentes (se guarda en govkit notas)\n'
                '  govkit -p --sumar 3 "y qué le pido a cada uno" retoma la nota 3 y le suma la respuesta\n'
-               '  pbpaste | govkit -p                            pega un error, SQL o YAML')
+               '  pbpaste | govkit -p                            pega un error, SQL o YAML\n'
+               '  govkit verificar "lo que escuché en la reu"    ¿existe ese criterio? veredicto + fuentes')
     ap.add_argument("--version", action="version", version=f"govkit {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -601,6 +616,14 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("ids", nargs="*", help="GOV-XXX-NNN, KBnn.Xn o KB_nn (o texto que los contenga)")
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.set_defaults(fn=cmd_fuentes)
+
+    p = sub.add_parser("verificar", aliases=["existe"],
+                       help="¿existe este criterio en el framework? (algo que escuchaste en una reunión)")
+    p.add_argument("afirmacion", nargs="*", help='p.ej. "el business owner puede ser un buzón genérico"')
+    p.add_argument("--sin-ia", action="store_true", help="solo búsqueda determinista (sin Claude Code)")
+    p.add_argument("--no-guardar", action="store_true", help="no guardar como nota")
+    p.add_argument("--format", choices=["text", "json"], default="text")
+    p.set_defaults(fn=cmd_verificar)
 
     p = sub.add_parser("mcp", help="servidor MCP (stdio) para agentes: Claude Code, Cursor, Claude Desktop")
     p.add_argument("--print-config", action="store_true", help="mostrar cómo registrarlo en los clientes")

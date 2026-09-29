@@ -29,7 +29,7 @@ READONLY = ["mcp__govkit__lint", "mcp__govkit__gate", "mcp__govkit__score", "mcp
             "mcp__govkit__verify_semantic_findings", "Bash(govkit lint:*)", "Bash(govkit gate:*)",
             "Bash(govkit score:*)", "Bash(govkit explain:*)", "Bash(govkit rules:*)", "Bash(govkit kb:*)",
             "Bash(govkit fix)", "Bash(govkit privado --check:*)", "Bash(govkit fuentes:*)", "Bash(govkit notas:*)",
-            "mcp__govkit__sources", "mcp__govkit__notes_list", "mcp__govkit__notes_get", "mcp__govkit__notes_save",
+            "mcp__govkit__sources", "mcp__govkit__criteria_search", "mcp__govkit__notes_list", "mcp__govkit__notes_get", "mcp__govkit__notes_save",
             "mcp__govkit__notes_append"]
 DIRECT_EXTRA = ["Read", "Grep", "Glob", "Bash(git status:*)", "Bash(git log:*)", "Bash(git diff:*)",
                 "Bash(git branch:*)", "Bash(ls:*)"]
@@ -44,7 +44,10 @@ Si el MCP no responde, usa el CLI por Bash: `govkit lint --format json`, `govkit
 `govkit kb pack -q "<consulta>"`.
 
 Cómo trabajar:
-1. Si la carpeta es un repo de Data Product, parte con `lint` y resume por severidad (BLOCKER/HIGH primero).
+0. Preguntas libres (p.ej. «en la reunión dijeron que X, ¿existe ese criterio?»): NO corras `lint`; usa
+   `criteria_search` (y `kb_context` con query) y responde con «Veredicto: EXISTE | EXISTE CON MATICES | NO EXISTE |
+   CONTRADICE», qué dice exactamente el framework (IDs y cita textual) y en qué difiere de lo escuchado.
+1. Si la pregunta es sobre el repo y la carpeta es un Data Product, parte con `lint` y resume por severidad.
 2. Si el usuario pega un error, log de CI, SQL, YAML o política IAM: relaciónalo con las reglas (`search_rules`,
    `kb_context` con query) y con los hallazgos de `lint`; propone el cambio exacto (archivo:línea).
 3. Nunca inventes valores de negocio (owners, SLA, KPIs, clasificación): pregúntalos.

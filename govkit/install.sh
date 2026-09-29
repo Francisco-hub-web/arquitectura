@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================================
 #  govkit — instalador (macOS / Linux · compatible con bash 3.2)
-#  Uso:  cd ~/Downloads && tar xzf govkit-v1.3.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+#  Uso:  cd ~/Downloads && tar xzf govkit-v1.4.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 #  Opciones:
 #    --pull-model        descarga el modelo local en Ollama (si Ollama está instalado)
 #    --model NOMBRE      modelo por defecto (default: qwen2.5:7b-instruct)
@@ -208,6 +208,7 @@ $(printf "\033[1;32m")Listo.$(printf "\033[0m") Ejecuta:  source ~/.zshrc
   govkit privado                                      # en cada repo: uso local, sin rastro en GitHub
   govkit "revisa este repo y dime qué falta"          # Claude Code interactivo, ya instruido para usar govkit
   govkit -p "¿qué le falta a mi data product?"        # solo la respuesta + fuentes, guardada en govkit notas
+  govkit verificar "lo que escuché en la reunión"     # ¿existe ese criterio en el framework?
   govkit lint --format html -o reporte.html           # reporte autocontenido para compartir
   govkit kb route --task promover_a_produccion        # qué conocimiento carga el LLM
   govkit ask "¿qué exige el gate a producción?" --no-llm
