@@ -5,7 +5,7 @@ title: GenAI y RAG gobernados (incluye este asistente)
 version: 1.0.0
 status: vigente
 tier: 5
-sources: ["12-ai-ml-data-framework.md §18-§19, §22-§23", "10-data-security-framework.md §19", "13-data-observability.md §20"]
+sources: ["12-ai-ml-dataframework.md §18-§19, §22-§23", "10-data-security-framework.md §19", "13-data-observability.md §20"]
 applies_to: [ai_ml, genai]
 triggers:
   tasks: [rag_genai]

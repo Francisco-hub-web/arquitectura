@@ -5,7 +5,7 @@ title: AI/ML sobre Data Products — features, training, inferencia
 version: 1.0.0
 status: vigente
 tier: 5
-sources: ["01-data-principles.md §10", "12-ai-ml-data-framework.md §3-§17, §20-§24, §28", "14 §9.12, §11.6", "08 §10.5, §19"]
+sources: ["01-data-principles.md §10", "12-ai-ml-dataframework.md §3-§17, §20-§24, §28", "14 §9.12, §11.6", "08 §10.5, §19"]
 applies_to: [ai_ml]
 triggers:
   tasks: [feature_ml, entrenar_modelo]

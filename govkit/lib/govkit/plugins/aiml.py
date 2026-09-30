@@ -1,4 +1,4 @@
-"""AI / ML / GenAI sobre Data Products gobernados (12-ai-ml-data-framework, 14 §9.12, §11.6)."""
+"""AI / ML / GenAI sobre Data Products gobernados (12-ai-ml-dataframework, 14 §9.12, §11.6)."""
 from __future__ import annotations
 
 from govkit.plugins import at, plugin

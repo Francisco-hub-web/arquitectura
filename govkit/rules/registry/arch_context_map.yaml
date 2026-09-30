@@ -1,0 +1,212 @@
+# Architecture Context Map curado (SUPER PROMPT §7-§8): "qué debo mirar si analizo esta ruta".
+# Complementa lo que govkit arch deriva solo (grafo de referencias, espejos, KB por ruta, reglas por glob).
+# Solo rutas y relaciones (sin copiar contenido corporativo). Etiquetas: DOC · COD · INF · CONF.
+version: 1
+
+# ------------------------------------------------------------------------------------------------ relaciones R1..R16
+relations:
+  - {id: R1, from: platform-core, to: governance, type: "complementariedad normativa (el cómo del qué)", label: DOC,
+     evidence: "global-data-platform-core/README.md: 'Complementario a global-data-governance'"}
+  - {id: R2, from: platform-core, to: governance, type: "referencia normativa a borradores (no verificable)", label: CONF,
+     evidence: "framework/data-contracts/docs/README.md enlaza docs/data-framework-draft/* (fuera de los repos; en GOV DataOps es 15)"}
+  - {id: R3, from: governance, to: platform-core, type: "dependencia de plantillas semánticas con destino vacío", label: CONF,
+     evidence: "Proceso Implementacion Capa Semantica.md exige framework/semantic-layer/template/; en PC solo .gitkeep"}
+  - {id: R4, from: governance, to: platform-core, type: "duplicación de la referencia ARTS ODM (con divergencia)", label: CONF,
+     evidence: "arts-odm-naming-reference.md en ambos repos; PC la genera desde .xlsx (skills/lakehouse-odm-generator)"}
+  - {id: R5, from: platform-core, to: metadata-catalog, type: "alimentación del catálogo (catalog-export)", label: COD,
+     evidence: "metadata/data_product.yaml catalog_export.target_path + cenco_dc sync-catalog-export --mirror-global-repo (espejo local)"}
+  - {id: R6, from: platform-core, to: "repos *-dp-*", type: "scaffold / espejo (bootstrap)", label: COD,
+     evidence: "data-products-baseline/bootstrap.sh + workflows 'Copiar a .github/workflows/ del repo del Data Product'"}
+  - {id: R7, from: archimate, to: "repos *-dp-*", type: "diseño aprobado por Data Product (HLD/MLD/LLD)", label: DOC,
+     evidence: "Views/Data Platform/Data Products/<país>/<repo>/ + ramas dp/<nombre>"}
+  - {id: R8, from: archimate, to: platform-core, type: "patrones de plataforma modelados (WAP, ARTS/ODM, medallion)", label: INF,
+     evidence: "LLD 'Silver - WAP ODM' ↔ framework/lakehouse (ARTS/ODM · WAP)"}
+  - {id: R9, from: archimate, to: governance, type: "capas de arquitectura (metadata, seguridad, consumo)", label: INF,
+     evidence: "HLD Data Platform: Metadata Platform / Security & Data Privacy / Analytical Data Consumption ↔ GOV 09/10/14"}
+  - {id: R10, from: archimate, to: metadata-catalog, type: "metadata y linaje (OpenLineage)", label: INF,
+     evidence: "elementos Metadata Platform, Metadata Repository, OpenLineage"}
+  - {id: R11, from: metadata-catalog, to: governance, type: "política de metadata (placeholder vacío en MC)", label: DOC,
+     evidence: "policies/09-metadata-governance.md (0 bytes) ↔ GOV docs/data-framework/09-metadata-governance.md"}
+  - {id: R12, from: governance, to: "Confluence", type: "publicación", label: COD, evidence: ".github/workflows/sync-confluence.yml"}
+  - {id: R13, from: governance, to: "skills EA colaboradoras", type: "dependencia no satisfecha", label: CONF,
+     evidence: "skills/ea-data-expert/references/trade-offs.md → data-architect.md (no existe)"}
+  - {id: R14, from: govkit, to: governance, type: "destilación normativa (KB + reglas)", label: COD, evidence: "kb/*.md sources · rules/catalog.yaml source.doc"}
+  - {id: R15, from: govkit, to: "lineamientos externos", type: "destilación (IAM, Estructura de Repositorio, OMD)", label: DESC,
+     evidence: "rules/catalog.yaml source.doc: lineamientos/* (no versionados en los 4 repos)"}
+  - {id: R16, from: govkit, to: platform-core, type: "estándar platform-core leído como dato (perfil de reglas GOV-PCX-*)", label: COD,
+     evidence: "plugins/platform_core.py lee data-contracts-architecture-standard.yaml / profile-manifest.yaml"}
+
+# ------------------------------------------------------------------------------------------------ rutas corporativas
+# glob (dentro de la fuente) → qué revisar también y por qué. `kb`/`rules`: conocimiento govkit relacionado.
+corp_paths:
+  - source: platform-core
+    glob: "framework/data-contracts/specs/schemas/**"
+    see:
+      - {source: platform-core, path: data-products-baseline/contracts/_schema/, why: "copia espejo que heredan los DP (debe ser idéntica; check_profile_artifacts_sync.py)"}
+      - {source: platform-core, path: data-products-baseline/contracts/_templates/, why: "plantillas validadas contra el estándar"}
+      - {source: platform-core, path: data-products-baseline/metadata/data_product.yaml, why: "odcs.profile_version de la ficha debe coincidir"}
+      - {source: platform-core, path: framework/data-contracts/tools/cenco_dc/, why: "validador Tier1/Tier2 que implementa el estándar"}
+      - {source: platform-core, path: framework/data-contracts/docs/, why: "documentos normativos listados en normative_docs"}
+      - {source: governance, path: docs/data-framework/06-data-product-definition.md, why: "Bloque Data Contract (06 §11)"}
+      - {source: governance, path: docs/data-framework/15-dataops-cicd.md, why: "contratos como mecanismo de CI (§17)"}
+    kb: [KB_05, KB_18]
+    rules: ["GOV-PCX-*", "GOV-CTR-*"]
+    conflicts: [C-01, C-02, C-03, C-05, C-12]
+  - source: platform-core
+    glob: "data-products-baseline/**"
+    see:
+      - {source: platform-core, path: framework/data-contracts/specs/schemas/, why: "estándar canónico del que es espejo"}
+      - {source: platform-core, path: data-products-baseline/scripts/, why: "validadores que corre el CI del DP"}
+      - {source: platform-core, path: data-products-baseline/.github/workflows/, why: "CI que se copia a cada DP (ramas develop/main: C-10)"}
+      - {source: archimate, path: model/diagrams/, why: "diseño aprobado del DP (Data Products/<país>/<repo>)"}
+      - {source: metadata-catalog, path: specs/, why: "destino del catalog-export (R5)"}
+    kb: [KB_18, KB_04, KB_05]
+    rules: ["GOV-PCX-*", "GOV-STR-*"]
+    conflicts: [C-01, C-02, C-10, C-13]
+  - source: platform-core
+    glob: "framework/lakehouse/**"
+    see:
+      - {source: governance, path: docs/data-framework/details/acronyms/arts-odm-naming-reference.md, why: "copia en governance (divergente: C-15)"}
+      - {source: platform-core, path: skills/lakehouse-odm-generator/, why: "genera el .md desde el Excel canónico"}
+      - {source: platform-core, path: data-products-baseline/contracts/_examples/silver/odm/, why: "ejemplo ODM (nomenclatura de columnas: C-08)"}
+      - {source: archimate, path: model/diagrams/, why: "vistas LLD 'Silver - WAP ODM' (ODM Arts Mapping)"}
+    kb: [KB_07, KB_06]
+    rules: ["GOV-NAM-*"]
+    conflicts: [C-08, C-15]
+  - source: governance
+    glob: "docs/data-framework/details/semantic-layer/**"
+    see:
+      - {source: platform-core, path: framework/semantic-layer/, why: "ubicación oficial declarada de plantillas (vacía: R3)"}
+      - {source: platform-core, path: framework/data-contracts/docs/odcs-alignment.md, why: "dataProduct eliminado en ODCS v3.1.0 (C-05)"}
+      - {source: governance, path: docs/data-framework/11-semantic-layer-framework.md, why: "marco normativo de la capa semántica"}
+    kb: [KB_12]
+    rules: ["GOV-SML-*"]
+    conflicts: [C-05, C-06]
+  - source: governance
+    glob: "docs/data-framework/**"
+    see:
+      - {source: platform-core, path: framework/, why: "materialización ejecutable del framework (R1)"}
+      - {source: governance, path: specs/01-data-principles.yaml, why: "principios estructurados"}
+    kb: [KB_00]
+    rules: []
+    conflicts: [C-11]
+  - source: governance
+    glob: "skills/ea-data-expert/**"
+    see:
+      - {source: governance, path: skills/ea-data-expert/data/ea-domains_map.json, why: "taxonomía que usa el script (C-09)"}
+      - {source: governance, path: skills/ea-data-expert/references/taxonomy.md, why: "taxonomía en prosa (numeración distinta: C-09)"}
+      - {source: governance, path: docs/data-framework/10-data-security-framework.md, why: "clasificación (vocabulario distinto a L0–L4: C-07)"}
+    kb: [KB_01, KB_10, KB_20]
+    rules: ["GOV-BIZ-*", "GOV-SEC-*"]
+    conflicts: [C-07, C-09]
+  - source: archimate
+    glob: "model/**"
+    see:
+      - {source: archimate, path: README.md, why: "main = diseño oficial aprobado; ramas dp/ domain/ model/ pattern/"}
+      - {source: platform-core, path: framework/lakehouse/, why: "patrones modelados (R8)"}
+      - {source: platform-core, path: data-products-baseline/, why: "estructura que implementa cada DP modelado"}
+    kb: [KB_06, KB_07]
+    rules: []
+    conflicts: [C-04]
+  - source: metadata-catalog
+    glob: "**"
+    see:
+      - {source: governance, path: docs/data-framework/09-metadata-governance.md, why: "contenido normativo real de metadata (R11)"}
+      - {source: platform-core, path: data-products-baseline/metadata/, why: "ficha + catalog-export que alimentan el catálogo (R5)"}
+      - {source: platform-core, path: framework/data-contracts/tools/cenco_dc/, why: "sync-catalog-export"}
+    kb: [KB_09, KB_21]
+    rules: ["GOV-MET-*"]
+    conflicts: [C-07]
+
+# ------------------------------------------------------------------------------------------------ rutas de un Data Product
+dp_paths:
+  - glob: "contracts/bronze/landing/**"
+    see:
+      - {source: platform-core, path: framework/data-contracts/docs/bronze-contract-patterns.md, why: "patrones de landing por origen (api_rest, sftp, s3, kafka, saas)"}
+      - {source: platform-core, path: data-products-baseline/contracts/_templates/, why: "plantillas bronze-landing(-api|-sftp)"}
+      - {source: platform-core, path: framework/data-contracts/specs/schemas/data-contracts-architecture-standard.yaml, why: "lineage_rules.bronze_landing + landing_origin_profiles"}
+      - {source: platform-core, path: framework/data-contracts/docs/x-cencosud-physical-model.md, why: "bloque physical / ingestion_origin"}
+    kb: [KB_05, KB_06]
+    conflicts: [C-01]
+  - glob: "contracts/bronze/raw/**"
+    see:
+      - {source: platform-core, path: data-products-baseline/contracts/_templates/, why: "plantilla bronze-raw"}
+      - {source: platform-core, path: framework/data-contracts/specs/schemas/data-contracts-architecture-standard.yaml, why: "lineage_rules.bronze_raw (upstream landing obligatorio)"}
+    kb: [KB_05, KB_06]
+    conflicts: [C-01]
+  - glob: "contracts/silver/**"
+    see:
+      - {source: platform-core, path: data-products-baseline/contracts/_examples/silver/odm/, why: "ejemplo ODM de referencia"}
+      - {source: platform-core, path: framework/lakehouse/docs/arts-odm-naming-reference.md, why: "nomenclatura ARTS ODM"}
+      - {source: platform-core, path: framework/data-contracts/specs/schemas/data-contracts-architecture-standard.yaml, why: "lineage_rules.silver_odm + catalog (iceberg_table)"}
+      - {source: archimate, path: model/diagrams/, why: "LLD 'Silver - WAP ODM' del DP si está modelado"}
+    kb: [KB_07, KB_06, KB_08]
+    conflicts: [C-08, C-15]
+  - glob: "contracts/gold/**"
+    see:
+      - {source: platform-core, path: framework/data-contracts/docs/gold-contract-patterns.md, why: "patrones dim/fct, grain, nombres gold_dim_/gold_fct_"}
+      - {source: platform-core, path: data-products-baseline/contracts/_examples/gold/, why: "ejemplos dim_customer / fct_customer_orders_daily"}
+      - {source: platform-core, path: framework/data-contracts/specs/schemas/data-contracts-architecture-standard.yaml, why: "lineage_rules.gold_dim / gold_fact"}
+    kb: [KB_05, KB_07, KB_12]
+    conflicts: [C-13]
+  - glob: "contracts/semantic/**"
+    see:
+      - {source: governance, path: "docs/data-framework/details/semantic-layer/Proceso Implementacion Capa Semantica.md", why: "proceso semántico (.odcs.yaml / .osi.yaml)"}
+      - {source: platform-core, path: framework/data-contracts/docs/odcs-alignment.md, why: "diferencias con ODCS v3.1.0"}
+    kb: [KB_12]
+    conflicts: [C-05]
+  - glob: "contracts/input/**"
+    see:
+      - {source: platform-core, path: framework/data-contracts/docs/folder-conventions.md, why: "contracts/input/ prohibido en el estándar platform-core"}
+    kb: [KB_05]
+    conflicts: [C-01]
+  - glob: "contracts/output/**"
+    see:
+      - {source: platform-core, path: framework/data-contracts/docs/folder-conventions.md, why: "el estándar platform-core organiza por capa medallion"}
+    kb: [KB_05]
+    conflicts: [C-01]
+  - glob: "contracts/_schema/**"
+    see:
+      - {source: platform-core, path: framework/data-contracts/specs/schemas/, why: "canónico: la copia del DP debe estar en la misma versión de perfil"}
+    kb: [KB_05]
+    conflicts: [C-03]
+  - glob: "metadata/data_product.yaml"
+    see:
+      - {source: platform-core, path: data-products-baseline/metadata/data_product.yaml, why: "plantilla oficial de la ficha (G-CORP-01)"}
+      - {source: platform-core, path: framework/data-contracts/docs/metadata-registry.md, why: "registro de metadata y data_contracts[]"}
+      - {source: metadata-catalog, path: specs/, why: "destino del catalog-export"}
+    kb: [KB_04, KB_09]
+    conflicts: [C-02, C-03, C-06, C-07]
+  - glob: "metadata/catalog/**"
+    see:
+      - {source: platform-core, path: data-products-baseline/metadata/, why: "en el estándar platform-core la ficha vive en metadata/data_product.yaml"}
+    kb: [KB_04, KB_09]
+    conflicts: [C-02]
+  - glob: "metadata/catalog-export/**"
+    see:
+      - {source: platform-core, path: framework/data-contracts/tools/cenco_dc/, why: "sync-catalog-export (se regenera; no editar a mano)"}
+      - {source: metadata-catalog, path: README.md, why: "catálogo destino"}
+    kb: [KB_09]
+    conflicts: []
+  - glob: "modeling/dbt/**"
+    see:
+      - {source: platform-core, path: framework/lakehouse/, why: "ARTS/ODM · WAP"}
+      - {source: archimate, path: model/diagrams/, why: "procesos dbt / WAP modelados en la LLD del DP"}
+    kb: [KB_06, KB_07, KB_08]
+    conflicts: [C-13]
+  - glob: ".github/workflows/**"
+    see:
+      - {source: platform-core, path: data-products-baseline/.github/workflows/, why: "workflows oficiales a copiar (validate-contracts, sync-metadata-export)"}
+      - {source: governance, path: docs/data-framework/15-dataops-cicd.md, why: "estrategia de ramas y CI (C-10)"}
+    kb: [KB_18]
+    conflicts: [C-10, C-12]
+  - glob: "docs/adr/**"
+    see:
+      - {source: governance, path: skills/ea-data-expert/assets/ADR-Template.md, why: "plantilla corporativa de ADR"}
+    kb: [KB_18]
+    conflicts: []
+  - glob: "**"
+    see:
+      - {source: platform-core, path: data-products-baseline/README.md, why: "estructura oficial del repo de Data Product"}
+    kb: [KB_18]
+    conflicts: []

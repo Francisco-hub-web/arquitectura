@@ -12,9 +12,11 @@
 #    source      documento + sección + cita normativa (trazabilidad regla → lineamiento)
 #    kb          mini-contextos que explican la regla (remediación asistida / revisión semántica)
 #    check       declarativo (exists|field|each|count|filename|regex_scan|composite) o plugin|post
+#    standards   estándar(es) donde aplica la regla: lineamientos | platform-core (sin campo = ambos; ADR-009)
+#    opt_in      la regla solo corre si el usuario la activa (config `<opt_in>: true` o GOVKIT_<OPT_IN>=1)
 # =====================================================================================================
 version: 1
-ruleset_version: "2026.09.1"
+ruleset_version: "2026.10.0"
 framework: "Cencosud Data & AI Discipline Framework"
 
 # Perfiles de escalamiento reutilizables (grupos: ideacion, diseno, desarrollo, gate, operacion, salida)
@@ -82,6 +84,7 @@ rules:
 
 - id: GOV-STR-002
   title: Subcarpetas estándar (contracts, docs, tests, src, pipelines)
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: estructura
   pillar: dataops_cicd
@@ -116,6 +119,7 @@ rules:
 
 - id: GOV-STR-004
   title: Workflows CI/CD pr.yml y deploy.yml
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: estructura
   pillar: dataops_cicd
@@ -234,6 +238,7 @@ rules:
 
 - id: GOV-STR-012
   title: Modelo lógico/físico documentado (DBML)
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: estructura
   pillar: product_definition
@@ -265,6 +270,7 @@ rules:
 # =====================================================================================================
 - id: GOV-NAM-001
   title: Nombre de repositorio {domain}-{subdomain}-{type}-dp-{country}
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: nomenclatura
   pillar: dataops_cicd
@@ -323,6 +329,7 @@ rules:
 
 - id: GOV-NAM-005
   title: Modelos Gold dbt dim_* / fact_*
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: nomenclatura
   pillar: product_definition
@@ -338,6 +345,7 @@ rules:
 
 - id: GOV-NAM-006
   title: Contratos Gold ubicados según tipo (dim/fact)
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: nomenclatura
   pillar: data_contract
@@ -473,6 +481,7 @@ rules:
 # =====================================================================================================
 - id: GOV-DPD-001
   title: Ficha del Data Product versionada (metadata as code)
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: data_product
   pillar: product_definition
@@ -859,6 +868,7 @@ rules:
 
 - id: GOV-DPD-027
   title: Definition of Ready (entrada a desarrollo)
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: data_product
   pillar: product_definition
@@ -884,6 +894,7 @@ rules:
 
 - id: GOV-DPD-028
   title: Definition of Done (listo para producción)
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: data_product
   pillar: product_definition
@@ -917,6 +928,7 @@ rules:
 # =====================================================================================================
 - id: GOV-CTR-001
   title: Contrato de salida definido
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: contratos
   pillar: data_contract
@@ -932,6 +944,7 @@ rules:
 
 - id: GOV-CTR-002
   title: Contrato de entrada por cada input
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: contratos
   pillar: data_contract
@@ -946,6 +959,7 @@ rules:
 
 - id: GOV-CTR-003
   title: Contrato conforme al esquema (campos mínimos)
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: contratos
   pillar: data_contract
@@ -961,6 +975,7 @@ rules:
 
 - id: GOV-CTR-004
   title: Versión semántica del contrato
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: contratos
   pillar: data_contract
@@ -975,6 +990,7 @@ rules:
 
 - id: GOV-CTR-005
   title: Compatibilidad y política de cambios declaradas
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: contratos
   pillar: data_contract
@@ -995,6 +1011,7 @@ rules:
 
 - id: GOV-CTR-006
   title: Granularidad y claves de negocio del contrato de salida
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: contratos
   pillar: data_contract
@@ -1009,6 +1026,7 @@ rules:
 
 - id: GOV-CTR-007
   title: Breaking change sin versión MAJOR
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: contratos
   pillar: data_contract
@@ -1037,6 +1055,7 @@ rules:
 
 - id: GOV-CTR-009
   title: Contrato referencia al Data Product del repositorio
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: contratos
   pillar: data_contract
@@ -1083,6 +1102,7 @@ rules:
 
 - id: GOV-CTR-012
   title: SLA del contrato coherente con el del Data Product
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: contratos
   pillar: data_contract
@@ -1097,6 +1117,7 @@ rules:
 
 - id: GOV-CTR-013
   title: Campos del contrato descritos
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: H
   category: contratos
   pillar: data_contract
@@ -1307,6 +1328,7 @@ rules:
 
 - id: GOV-MET-012
   title: Archivo de mapeo OpenMetadata presente
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009, C-01/C-02/C-13)
   nature: D
   category: metadata
   pillar: metadata_governance
@@ -1379,6 +1401,7 @@ rules:
 
 - id: GOV-MET-016
   title: Descripción útil de contratos
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: H
   category: metadata
   pillar: metadata_governance
@@ -1422,6 +1445,7 @@ rules:
 # =====================================================================================================
 - id: GOV-QLT-001
   title: Reglas de calidad definidas
+  standards: [lineamientos]   # en repos platform-core aplica GOV-PCX-* (ADR-009)
   nature: D
   category: calidad
   pillar: data_quality
@@ -2957,7 +2981,7 @@ rules:
   remediation: "Buscar en el catálogo y documentar por qué no se reutiliza."
 
 # =====================================================================================================
-# AIM · AI / ML / GenAI  (12-ai-ml-data-framework; 14 §9.12, §11.6)
+# AIM · AI / ML / GenAI  (12-ai-ml-dataframework; 14 §9.12, §11.6)
 # =====================================================================================================
 - id: GOV-AIM-001
   title: Features con ficha completa
@@ -2967,7 +2991,7 @@ rules:
   severity: HIGH
   technique: schema
   enforcement: [pr]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§12", quote: "nombre, definición, lógica de cálculo, ventana temporal, granularidad, owner, Data Product fuente, frecuencia, calidad esperada, sensibilidad, contexto de uso"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§12", quote: "nombre, definición, lógica de cálculo, ventana temporal, granularidad, owner, Data Product fuente, frecuencia, calidad esperada, sensibilidad, contexto de uso"}
   kb: [KB_15]
   check:
     kind: each
@@ -2995,7 +3019,7 @@ rules:
   severity: HIGH
   technique: schema
   enforcement: [pr]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§14", quote: "Un modelo no debe entrenarse sobre un dataset que no pueda reconstruirse razonablemente."}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§14", quote: "Un modelo no debe entrenarse sobre un dataset que no pueda reconstruirse razonablemente."}
   kb: [KB_15]
   check:
     kind: each
@@ -3023,7 +3047,7 @@ rules:
   severity: HIGH
   technique: schema
   enforcement: [pr]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§15", quote: "dataset de validación, dataset de test, criterio de partición temporal o lógica, métricas de evaluación, controles de leakage"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§15", quote: "dataset de validación, dataset de test, criterio de partición temporal o lógica, métricas de evaluación, controles de leakage"}
   kb: [KB_15]
   check:
     kind: each
@@ -3048,7 +3072,7 @@ rules:
   enforcement: [pr, gate]
   stages: {ideacion: "OFF", diseno: MEDIUM, desarrollo: HIGH}
   requires: {artifact: training_sets}
-  source: {doc: 12-ai-ml-data-framework.md, section: "§16", quote: "No debe promoverse un caso AI a producción si las features o inputs de inferencia no son consistentes con los del entrenamiento."}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§16", quote: "No debe promoverse un caso AI a producción si las features o inputs de inferencia no son consistentes con los del entrenamiento."}
   kb: [KB_15]
   check: {kind: plugin, name: aiml.train_inference_consistency}
   remediation: "Usar en inferencia exactamente las mismas definiciones/versiones de features que en entrenamiento."
@@ -3062,7 +3086,7 @@ rules:
   technique: graph
   enforcement: [pr]
   requires: {artifact: features}
-  source: {doc: 12-ai-ml-data-framework.md, section: "§10", quote: "La AI debe consumir activos gobernados siempre que sea posible"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§10", quote: "La AI debe consumir activos gobernados siempre que sea posible"}
   kb: [KB_15]
   check: {kind: plugin, name: aiml.feature_sources}
   remediation: "Declarar el Data Product fuente como input con contrato."
@@ -3077,7 +3101,7 @@ rules:
   enforcement: [gate]
   stages: *ops_high
   when: [{dp: spec.type, equals: ai_ml}]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§23", quote: "drift de datos, drift de modelos"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§23", quote: "drift de datos, drift de modelos"}
   kb: [KB_15, KB_17]
   check: {kind: plugin, name: aiml.drift_monitors}
   remediation: "Agregar monitores con signal data_drift y model_drift."
@@ -3091,7 +3115,7 @@ rules:
   technique: schema
   enforcement: [pr]
   requires: {artifact: features}
-  source: {doc: 12-ai-ml-data-framework.md, section: "§22", quote: "datos personales en entrenamiento, consentimiento de uso de datos personales"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§22", quote: "datos personales en entrenamiento, consentimiento de uso de datos personales"}
   kb: [KB_15, KB_10]
   check: {kind: plugin, name: aiml.pii_training}
   remediation: "Declarar consent_basis y minimization para cada feature PII."
@@ -3104,7 +3128,7 @@ rules:
   severity: HIGH
   technique: schema
   enforcement: [pr]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§18-§19", quote: "No debe exponerse GenAI sobre contenido corporativo sin controlar fuentes, clasificación, trazabilidad y alcance de uso."}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§18-§19", quote: "No debe exponerse GenAI sobre contenido corporativo sin controlar fuentes, clasificación, trazabilidad y alcance de uso."}
   kb: [KB_16]
   check:
     kind: each
@@ -3127,7 +3151,7 @@ rules:
   severity: MEDIUM
   technique: schema
   enforcement: [pr]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§22", quote: "retención de prompts y embeddings"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§22", quote: "retención de prompts y embeddings"}
   kb: [KB_16]
   check: {kind: field, target: rag, fields: {spec.retention.prompts: {not_placeholder: true}, spec.retention.embeddings: {not_placeholder: true}}}
   remediation: "Declarar spec.retention.prompts y spec.retention.embeddings."
@@ -3142,7 +3166,7 @@ rules:
   enforcement: [pr]
   stages: *from_design
   when: [{dp: spec.type, equals: ai_ml}]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§17", quote: "Los outputs de modelos no deben verse solo como artefactos internos."}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§17", quote: "Los outputs de modelos no deben verse solo como artefactos internos."}
   kb: [KB_15]
   check: {kind: count, target: data_product, path: spec.outputs, where: [{item: type, in: [modelo_score, feature_set, documento_rag]}], min: 1,
           message: "El producto AI/ML no declara outputs de tipo modelo_score / feature_set / documento_rag"}
@@ -3156,7 +3180,7 @@ rules:
   severity: HIGH
   technique: llm
   enforcement: [pr]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§15, §21"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§15, §21"}
   kb: [KB_15]
   semantic_question: "¿Alguna feature usa información posterior al momento de predicción (ventanas que cruzan la fecha de corte del target)?"
   remediation: "Recalcular features con ventanas cerradas antes del evento a predecir (point-in-time)."
@@ -3169,7 +3193,7 @@ rules:
   severity: MEDIUM
   technique: llm
   enforcement: [pr]
-  source: {doc: 12-ai-ml-data-framework.md, section: "§28", quote: "intentar resolver con AI problemas que todavía requieren primero un mejor Data Product base"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "§28", quote: "intentar resolver con AI problemas que todavía requieren primero un mejor Data Product base"}
   kb: [KB_15]
   semantic_question: "¿El caso AI compensa con el modelo carencias de calidad o completitud del Data Product fuente?"
   remediation: "Priorizar la mejora del Data Product base."
@@ -3953,7 +3977,7 @@ rules:
   severity: INFO
   technique: regex
   enforcement: [periodic]
-  source: {doc: 12-ai-ml-data-framework.md, section: "encabezado", quote: "Pendiente validar punto 19"}
+  source: {doc: 12-ai-ml-dataframework.md, section: "encabezado", quote: "Pendiente validar punto 19"}
   kb: [KB_00]
   check: {kind: plugin, name: docs.pending_notes}
   remediation: "Resolver o asignar owner y fecha a cada pendiente."
@@ -4044,3 +4068,387 @@ rules:
   kb: [KB_19]
   check: {kind: plugin, name: portfolio.overlap}
   remediation: "Evaluar consolidación en el comité de dominio."
+
+# =====================================================================================================
+# PCX · ESTÁNDAR PLATFORM-CORE (ODCS v3.1.0 + perfil xCencosud; ADR-009) — el estándar se lee como dato
+# =====================================================================================================
+
+- id: GOV-PCX-001
+  title: Ficha del Data Product en metadata/data_product.yaml (platform-core)
+  standards: [platform-core]
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: exists
+  enforcement: [pr, pre-commit]
+  stages: *gate_blocker
+  source: {doc: global-data-platform-core/data-products-baseline/scripts/check_data_contracts_architecture_standard.py, section: "check_product", quote: "missing metadata/data_product.yaml (required for product scope)"}
+  kb: [KB_04, KB_09]
+  check: {kind: plugin, name: pcx.ficha_exists}
+  remediation: "Crear metadata/data_product.yaml desde la plantilla del baseline (`govkit fix --apply` la crea con marcas <COMPLETAR>)."
+
+- id: GOV-PCX-002
+  title: "Ficha platform-core: campos obligatorios completos y enums válidos"
+  standards: [platform-core]
+  nature: D
+  category: data_product
+  pillar: product_definition
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, pre-commit]
+  stages: *design_up
+  source: {doc: global-data-platform-core/data-products-baseline/metadata/data_product.yaml, section: "G-CORP-01", quote: "Completar todos los placeholders <...> al bootstrap del repo."}
+  kb: [KB_04, KB_03]
+  check: {kind: plugin, name: pcx.ficha_fields}
+  remediation: "Completar data_product_id, display_name, domain, udn, stage, architecture_pattern, lifecycle_status, owners y clasificación con valores reales."
+
+- id: GOV-PCX-003
+  title: "Ficha platform-core: bloque odcs en el perfil vigente"
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/tools/cenco_dc/src/cenco_dc/validation/metadata/registry.py, section: "run_metadata_validation", quote: "metadata.odcs.profile_version must be the current profile"}
+  kb: [KB_05]
+  check: {kind: plugin, name: pcx.ficha_odcs}
+  remediation: "Alinear odcs.profile_version y api_version_default con profile-manifest.yaml de platform-core."
+
+- id: GOV-PCX-004
+  title: "Ficha platform-core: data_contracts[] registra cada contrato existente"
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, pre-commit]
+  stages: *draft_ok
+  source: {doc: global-data-platform-core/framework/data-contracts/docs/metadata-registry.md, section: "data_contracts[]", quote: "contract_path not found / contract_id mismatch metadata vs file"}
+  kb: [KB_05, KB_09]
+  check: {kind: plugin, name: pcx.ficha_registry}
+  remediation: "Registrar cada contrato (contract_path, contract_id, medallion_object, layer, status) y corregir rutas/IDs."
+
+- id: GOV-PCX-005
+  title: "Contratos: data_product_repo = data_product_id de la ficha"
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/tools/cenco_dc/src/cenco_dc/validation/tier1/extension_required.py, section: "ExtensionRequiredRule", quote: "extension.data_product_repo must be the data product id"}
+  kb: [KB_05]
+  check: {kind: plugin, name: pcx.dp_repo_match}
+  remediation: "Usar en customProperties.xCencosud.data_product_repo exactamente el data_product_id de la ficha."
+
+- id: GOV-PCX-006
+  title: Contratos solo en carpetas medallion (sin contracts/input|output, silver/stg|wap)
+  standards: [platform-core]
+  nature: D
+  category: estructura
+  pillar: data_contract
+  severity: BLOCKER
+  technique: regex
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/docs/folder-conventions.md, section: "Rutas", quote: "contracts/input/ is not a valid path — use bronze/landing/ or bronze/raw/"}
+  kb: [KB_05, KB_06]
+  check: {kind: plugin, name: pcx.medallion_paths}
+  remediation: "Mover el contrato a bronze/landing|raw, silver/odm, gold/dim|fact o semantic según la capa del objeto."
+
+- id: GOV-PCX-007
+  title: Contrato ODCS v3.1.0 bien formado (identidad, status, sin claves raíz prohibidas)
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/specs/schemas/cencosud-odcs-minimal.schema.json, section: "required / status / forbidden_root_keys", quote: "x-cencosud, dataQuality y sla no son claves raíz ODCS"}
+  kb: [KB_05]
+  check: {kind: plugin, name: pcx.odcs_shape}
+  remediation: "apiVersion aprobado, kind DataContract, id UUID único, version semver, status del enum; x-cencosud→customProperties, dataQuality→schema[].quality[], sla→slaProperties[]."
+
+- id: GOV-PCX-008
+  title: Extensión xCencosud presente y coherente con la ruta (layer/medallion_zone)
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/docs/x-cencosud-physical-model.md, section: "customProperties.xCencosud", quote: "extension required: data_product_repo, layer, asset_type, medallion_object"}
+  kb: [KB_05, KB_06]
+  check: {kind: plugin, name: pcx.extension}
+  remediation: "Agregar customProperties[property=xCencosud] con data_product_repo, layer, medallion_zone (según carpeta), asset_type y medallion_object."
+
+- id: GOV-PCX-009
+  title: Contratos Gold nombrados dim_* / fct_* (platform-core)
+  standards: [platform-core]
+  nature: D
+  category: nomenclatura
+  pillar: data_contract
+  severity: MEDIUM
+  technique: regex
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/docs/gold-contract-patterns.md, section: "§2 Dim vs fact", quote: "fct_<process>.yaml · gold_fct_<process>"}
+  kb: [KB_07, KB_05]
+  check: {kind: plugin, name: pcx.gold_names}
+  remediation: "Renombrar a gold/dim/dim_<entidad>.yaml y gold/fact/fct_<proceso>.yaml (MAJOR si ya está publicado)."
+
+- id: GOV-PCX-010
+  title: Bloque processing deprecado (perfil ≥ 1.2.0)
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/specs/schemas/profile-manifest.yaml, section: "profiles 1.2.0", quote: "processing deprecado (jobs en DataOps)"}
+  kb: [KB_05, KB_18]
+  check: {kind: plugin, name: pcx.processing_forbidden}
+  remediation: "Eliminar processing y declarar upstream_contract_ref / downstream_contract_ref; los jobs viven en el repo DataOps."
+
+- id: GOV-PCX-011
+  title: PII declarada en la extensión (pii_classification)
+  standards: [platform-core]
+  nature: D
+  category: seguridad
+  pillar: security_privacy
+  severity: HIGH
+  technique: regex
+  enforcement: [pr, pre-commit]
+  stages: *design_up
+  source: {doc: global-data-platform-core/framework/data-contracts/specs/schemas/cencosud-odcs-minimal.schema.json, section: "$defs.cencosudExtension.pii_classification", quote: "none | personal | sensitive"}
+  kb: [KB_10]
+  check: {kind: plugin, name: pcx.pii}
+  remediation: "Declarar pii_classification personal|sensitive si hay datos personales (confirmar con el Data Steward; equivalencias C-07)."
+
+- id: GOV-PCX-012
+  title: Propiedades del contrato en snake_case
+  standards: [platform-core]
+  nature: D
+  category: nomenclatura
+  pillar: data_contract
+  severity: LOW
+  technique: regex
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/data-products-baseline/contracts/_examples/silver/odm/pa_party.example.yaml, section: "schema[].properties[].name", quote: "party_id, ingestion_date"}
+  kb: [KB_07]
+  check: {kind: plugin, name: pcx.property_names}
+  remediation: "Nombrar propiedades en snake_case (la convención ARTS en MAYÚSCULA está en revisión: C-08)."
+
+- id: GOV-PCX-013
+  title: Linaje por capa (upstream/downstream según lineage_rules)
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, pre-commit]
+  stages: *draft_ok
+  source: {doc: global-data-platform-core/framework/data-contracts/specs/schemas/data-contracts-architecture-standard.yaml, section: "lineage_rules", quote: "bronze_raw: upstream_contract_ref required (contracts/bronze/landing/) …"}
+  kb: [KB_05, KB_06]
+  check: {kind: plugin, name: pcx.lineage}
+  remediation: "Declarar referencias por capa: landing→raw→silver/odm→gold (dim/fact); cada ref empieza con contracts/ y existe."
+
+- id: GOV-PCX-014
+  title: Linaje bidireccional consistente (perfil ≥ 1.2.0)
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: graph
+  enforcement: [pr, pre-commit]
+  stages: *draft_ok
+  source: {doc: global-data-platform-core/framework/data-contracts/tools/cenco_dc/src/cenco_dc/validation/tier1/cross_contracts.py, section: "validate_lineage_cross_contracts", quote: "upstream_contract_ref must include … (downstream from …)"}
+  kb: [KB_05]
+  check: {kind: plugin, name: pcx.lineage_bidirectional}
+  remediation: "Si A declara a B como downstream, B debe declarar a A como upstream (y viceversa)."
+
+- id: GOV-PCX-015
+  title: Bloques physical / catalog por capa
+  standards: [platform-core]
+  nature: D
+  category: arquitectura
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pr, pre-commit]
+  stages: *draft_ok
+  source: {doc: global-data-platform-core/framework/data-contracts/docs/x-cencosud-physical-model.md, section: "physical / catalog", quote: "silver/odm y gold requieren catalog.iceberg_table; landing requiere physical"}
+  kb: [KB_06, KB_05]
+  check: {kind: plugin, name: pcx.physical_catalog}
+  remediation: "landing: physical (kind, format) sin iceberg_table · raw: physical y/o catalog · silver/odm y gold: catalog (glue_database, iceberg_table, table_type)."
+
+- id: GOV-PCX-016
+  title: "Landing: ingestion_origin coherente con physical y servers"
+  standards: [platform-core]
+  nature: D
+  category: arquitectura
+  pillar: data_contract
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/docs/bronze-contract-patterns.md, section: "landing_origin_profiles", quote: "api_rest → physical.kind api + servers.type api …"}
+  kb: [KB_05, KB_10]
+  check: {kind: plugin, name: pcx.landing_origin}
+  remediation: "Declarar ingestion_origin y alinear physical.kind / servers[].type; en api_rest active: base_url, path_template, http_method, auth.type y auth.secret_ref (referencia, nunca el secreto)."
+
+- id: GOV-PCX-017
+  title: Copia local del estándar (contracts/_schema) en la versión de platform-core
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: diff
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/data-products-baseline/scripts/check_data_contracts_architecture_standard.py, section: "check_product", quote: "contracts/_schema profile version out of date vs platform-core"}
+  kb: [KB_05, KB_18]
+  check: {kind: plugin, name: pcx.schema_copy_version}
+  remediation: "Re-sincronizar contracts/_schema/ desde data-products-baseline/contracts/_schema/ de platform-core."
+
+- id: GOV-PCX-018
+  title: CI oficial del Data Product (validate-contracts)
+  standards: [platform-core]
+  nature: D
+  category: dataops
+  pillar: dataops_cicd
+  severity: MEDIUM
+  technique: exists
+  enforcement: [pr, pre-commit]
+  stages: *from_build
+  source: {doc: global-data-platform-core/data-products-baseline/.github/workflows/validate-contracts.yaml, section: "workflow", quote: "Copiar a .github/workflows/ del repo del Data Product."}
+  kb: [KB_18]
+  check: {kind: plugin, name: pcx.dp_workflow}
+  remediation: "Copiar validate-contracts.yaml (y sync-metadata-export.yaml) desde data-products-baseline/.github/workflows/."
+
+- id: GOV-PCX-019
+  title: catalog-export del Data Product presente y con destino correcto
+  standards: [platform-core]
+  nature: D
+  category: metadata
+  pillar: metadata_governance
+  severity: LOW
+  technique: exists
+  enforcement: [pr, pre-commit]
+  source: {doc: global-data-platform-core/framework/data-contracts/tools/cenco_dc/src/cenco_dc/config/paths.py, section: "catalog_export_path", quote: "metadata/catalog-export/<data_product_id>.yaml"}
+  kb: [KB_09]
+  check: {kind: plugin, name: pcx.catalog_export}
+  remediation: "Regenerar con scripts/sync_metadata_catalog_export.py (o el workflow sync-metadata-export); no editar a mano."
+
+- id: GOV-PCX-020
+  title: Estructura del baseline platform-core
+  standards: [platform-core]
+  nature: D
+  category: estructura
+  pillar: dataops_cicd
+  severity: LOW
+  technique: exists
+  enforcement: [pr, pre-commit]
+  stages: *from_design
+  source: {doc: global-data-platform-core/data-products-baseline/README.md, section: "Estructura", quote: "espejo repo *-dp-* (bootstrap)"}
+  kb: [KB_18]
+  check: {kind: plugin, name: pcx.baseline_dirs}
+  remediation: "Crear las carpetas del baseline (`govkit fix --apply` crea las que falten con .gitkeep)."
+
+- id: GOV-PCX-021
+  title: Validador corporativo cenco_dc (opcional, --cenco-dc)
+  standards: [platform-core]
+  opt_in: cenco_dc
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  source: {doc: global-data-platform-core/framework/data-contracts/tools/cenco_dc/README.md, section: "validate-contracts / validate-metadata"}
+  kb: [KB_05]
+  check: {kind: plugin, name: pcx.cenco_dc}
+  remediation: "Corregir lo que reporta el validador oficial (Tier 1 + metadata); es la misma validación del CI del Data Product."
+
+- id: GOV-PCX-022
+  title: "Descripción del contrato y de sus propiedades (ODCS)"
+  standards: [platform-core]
+  nature: H
+  category: contratos
+  pillar: data_contract
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  stages: *draft_ok
+  source: {doc: 06-data-product-definition.md, section: "§11", quote: "campos críticos, reglas de obligatoriedad, formatos"}
+  kb: [KB_05, KB_09]
+  check: {kind: plugin, name: pcx.descriptions}
+  semantic_question: "¿Las descripciones de propiedades son inequívocas (unidad, moneda, zona horaria, reglas de cálculo) y consistentes con el glosario?"
+  remediation: "Completar description.purpose y la descripción de cada propiedad desde silver/odm (≥10 caracteres)."
+
+- id: GOV-PCX-023
+  title: "Compatibilidad declarada en contratos Silver/Gold (ODCS)"
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: MEDIUM
+  technique: schema
+  enforcement: [pr]
+  stages: *draft_ok
+  source: {doc: 06-data-product-definition.md, section: "§11 Campos recomendados", quote: "Compatibilidad backward / forward · Política de breaking changes"}
+  kb: [KB_05]
+  check: {kind: plugin, name: pcx.compatibility}
+  remediation: "Agregar en cada schema[] customProperties {property: compatibility, value: backward|forward|full|none}."
+
+- id: GOV-PCX-024
+  title: "Cambio rompiente sin versión MAJOR (ODCS, requiere --base)"
+  standards: [platform-core]
+  nature: D
+  category: contratos
+  pillar: data_contract
+  severity: HIGH
+  technique: diff
+  enforcement: [pr]
+  stages: *gate_blocker
+  source: {doc: 15-dataops-cicd.md, section: "§20", quote: "MAJOR: cambio rompiente, MINOR: nueva capacidad compatible, PATCH: corrección"}
+  kb: [KB_05, KB_18]
+  check: {kind: plugin, name: pcx.breaking_change}
+  remediation: "Subir la versión MAJOR del contrato y comunicar a los consumidores (o mantener compatibilidad)."
+
+- id: GOV-PCX-025
+  title: "Reglas de calidad críticas en contratos Silver/Gold (ODCS quality)"
+  standards: [platform-core]
+  nature: D
+  category: calidad
+  pillar: data_quality
+  severity: HIGH
+  technique: schema
+  enforcement: [pr]
+  stages: *build_up
+  source: {doc: 08-data-quality-framework.md, section: "§12", quote: "Si un Data Product no tiene reglas críticas definidas, no está listo para producción"}
+  kb: [KB_08]
+  check: {kind: plugin, name: pcx.quality_rules}
+  remediation: "Declarar reglas en schema[].quality o properties[].quality (completeness, unicidad de PK, validez) con dimensión y umbral."
+
+- id: GOV-PCX-026
+  title: "Nombre del repositorio de Data Product (patrón observado en el diseño aprobado)"
+  standards: [platform-core]
+  nature: D
+  category: nomenclatura
+  pillar: dataops_cicd
+  severity: LOW
+  technique: regex
+  enforcement: [pr]
+  scope: repo
+  source: {doc: global-data-archimate-models/README.md, section: "Ramas de Productos de Datos", quote: "dp/customer-master-dp-cl, dp/product-master-mdh-dp-cl"}
+  kb: [KB_18]
+  check: {kind: plugin, name: pcx.repo_name}
+  remediation: "Usar <dominio>-<subdominio>[-<tipo>]-dp-<país> (tabla oficial de tipos pendiente: C-04)."

@@ -72,7 +72,7 @@ def _deep_merge(base: Dict[str, Any], over: Dict[str, Any]) -> Dict[str, Any]:
 
 class RepoContext:
     def __init__(self, root: os.PathLike, catalog: Dict[str, Any], stage_override: Optional[str] = None,
-                 base_ref: Optional[str] = None, today: Optional[_dt.date] = None):
+                 base_ref: Optional[str] = None, today: Optional[_dt.date] = None, standard: Optional[str] = None):
         self.root = Path(root).resolve()
         self.catalog = catalog
         self.base_ref = base_ref
@@ -88,6 +88,14 @@ class RepoContext:
         self.config_path = (None if not cfg_path.exists() else
                             ".govkit.yaml" if cfg_path.parent == self.root else str(cfg_path))
         self.artifact_globs: Dict[str, List[str]] = dict(catalog.get("artifacts", {}))
+        from govkit import standards
+        self.standard, self.standard_reason = standards.detect(
+            self.root, standard or os.environ.get("GOVKIT_STANDARD") or self.config.get("standard"))
+        if self.standard == "platform-core":
+            # La ficha platform-core (metadata/data_product.yaml) tiene otro esquema: la evalúan las reglas GOV-PCX-*.
+            # La ficha govkit/lineamiento (spec.*) solo se considera si existe en metadata/catalog/.
+            self.artifact_globs["data_product"] = [g for g in self.artifact_globs.get("data_product", [])
+                                                   if g.startswith("metadata/catalog/")]
         self.artifact_globs.update(self.config.get("artifacts") or {})
         self.lifecycle = registry("lifecycle")
         self._files: Optional[List[str]] = None
@@ -175,12 +183,27 @@ class RepoContext:
         found, value = dig(dp.data, path)
         return value if found else default
 
+    @property
+    def dp_file(self) -> Optional[str]:
+        """Ficha del Data Product según el estándar (platform-core: metadata/data_product.yaml)."""
+        if self.standard == "platform-core":
+            return "metadata/data_product.yaml" if self.exists("metadata/data_product.yaml") else None
+        return self.dp.path if self.dp else None
+
+    @property
+    def expected_dp_file(self) -> str:
+        return "metadata/data_product.yaml" if self.standard == "platform-core" else "metadata/catalog/data_product.yaml"
+
     # ------------------------------------------------------------------ ciclo de vida
     @property
     def stage(self) -> str:
         if self._stage_override:
             return self._stage_override
         state = self.dp_get("spec.lifecycle.state")
+        if state is None and self.standard == "platform-core" and self.exists("metadata/data_product.yaml"):
+            pc = self.doc("metadata/data_product.yaml").data
+            lc = pc.get("lifecycle_status") if isinstance(pc, dict) else None
+            state = (registry("platform_core").get("ficha") or {}).get("lifecycle_map", {}).get(str(lc))
         return state if state in self.lifecycle.get("states", {}) else self.lifecycle.get("default_state", "en_desarrollo")
 
     @property

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================================
 #  govkit — instalador (macOS / Linux · compatible con bash 3.2)
-#  Uso:  cd ~/Downloads && tar xzf govkit-v1.4.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+#  Uso:  cd ~/Downloads && tar xzf govkit-v2.0.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 #  Opciones:
 #    --pull-model        descarga el modelo local en Ollama (si Ollama está instalado)
 #    --model NOMBRE      modelo por defecto (default: qwen2.5:7b-instruct)
@@ -210,6 +210,12 @@ $(printf "\033[1;32m")Listo.$(printf "\033[0m") Ejecuta:  source ~/.zshrc
   govkit -p "¿qué le falta a mi data product?"        # solo la respuesta + fuentes, guardada en govkit notas
   govkit verificar "lo que escuché en la reunión"     # ¿existe ese criterio en el framework?
   govkit lint --format html -o reporte.html           # reporte autocontenido para compartir
+
+  Memoria arquitectónica (repos corporativos en solo lectura: nunca pull, nunca toca tu working tree):
+  govkit arch sync                                    # clones en ~/global-* → fetch + cambios + alertas
+  govkit arch ingest --snapshot ~/Downloads/*.txt     # alternativa sin git: snapshots .txt
+  govkit arch contexto contracts/gold/fact/x.yaml     # qué debo mirar si analizo esta ruta
+  govkit arch conflictos · arch adr · arch dp .       # contradicciones, ADR/Potential ADR, diseño ArchiMate
   govkit kb route --task promover_a_produccion        # qué conocimiento carga el LLM
   govkit ask "¿qué exige el gate a producción?" --no-llm
   open $TARGET/docs/00-SAD-sistema-gobernanza-hibrido.md

@@ -1,6 +1,6 @@
 # Sistema de Gobernanza Híbrido de Datos — Documento de Arquitectura de Solución (SAD)
 
-Versión: 1.1 (govkit 1.4.0: MCP, auto-remediación, reporte HTML, modo privado, fuentes verificables, notas y verificación de criterios)
+Versión: 2.0 (govkit 2.0.0: memoria arquitectónica de los repos corporativos, estándar platform-core, MCP, auto-remediación, reporte HTML, modo privado, fuentes verificables, notas y verificación de criterios)
 Estado: Propuesta para revisión del Equipo de Arquitectura de Datos Regional
 Fecha: 2026-09-25
 Alcance: Corporativo (aplicable a todos los repositorios de Data Products y al repositorio `access-analyzer`)
@@ -22,11 +22,11 @@ Este documento propone convertirla en un **Sistema de Gobernanza Híbrido** con 
 > Solo la superficie que requiere interpretación llega a un LLM local, con un contexto mínimo y verificable (consultivo).
 > Lo organizacional queda como checklist humano explícito.
 
-Resultados medidos sobre la implementación de referencia (`govkit` v1.4.0):
+Resultados medidos sobre la implementación de referencia (`govkit` v2.0.0):
 
 | Indicador | Valor |
 |---|---|
-| Lineamientos auditados y convertidos en reglas trazables (documento + sección + cita) | **259** |
+| Lineamientos auditados y convertidos en reglas trazables (documento + sección + cita) | **285** (259 + 26 del estándar platform-core) |
 | Reglas automatizables (Deterministas + Híbridas) | **230 (89%)** — 217 D · 13 H |
 | Reglas semánticas (LLM + KB, consultivas) | 19 (7%) |
 | Reglas organizacionales (revisión humana) | 10 (4%) |
@@ -36,7 +36,7 @@ Resultados medidos sobre la implementación de referencia (`govkit` v1.4.0):
 | Latencia del motor determinista (repo de referencia, 73 archivos) | ≈0,5 s |
 | Superficies de integración | CLI · pre-commit · CI (SARIF / JSON / HTML) · **MCP para agentes de código** (10 herramientas) |
 | Auto-remediación segura (`govkit fix`) | carpetas, plantillas, valores deterministas, semver, esqueleto `<COMPLETAR>` · ≈1 s |
-| Pruebas automatizadas del kit | 84 (Python 3.9 → 3.13) |
+| Pruebas automatizadas del kit | 97 (Python 3.9 → 3.13) |
 
 El corpus documental completo (~19 páginas más lineamientos; del orden de decenas de miles de tokens, estimado) no cabe
 en la ventana útil de un modelo local 7B–14B y, aun si cupiera, diluiría la atención del modelo. La modularización
@@ -79,7 +79,7 @@ reduce el contexto por revisión a una fracción del corpus y elimina del LLM to
                          └───────────────────────────────┬────────────────────────────────────┘
                                                          │ (1) Auditoría y compilación del conocimiento
                          ┌───────────────────────────────▼────────────────────────────────────┐
-  CAPA DE CONOCIMIENTO   │  rules/catalog.yaml (259 reglas D/H/S/O)   kb/KB_00..KB_21 (22 mini-ctx) │
+  CAPA DE CONOCIMIENTO   │  rules/catalog.yaml (285 reglas D/H/S/O)   kb/KB_00..KB_21 (22 mini-ctx) │
   (versionada en Git)    │  rules/registry/*.yaml (dominios, tags,     kb/_graph.yaml (dependencias,  │
                          │  lifecycle, scoring, cuentas, matriz)       tareas, proyecciones)          │
                          │  schemas/*.json (contratos de E/S)                                          │
@@ -637,6 +637,61 @@ Durante la adopción, govkit funciona como apoyo **local** del desarrollador sin
 | Guardias locales | pre-commit (contenido), commit-msg (mensaje) y pre-push (ramas, mensajes y contenido) bloquean menciones; hooks del equipo encadenados |
 | `govkit privado --check` | auditoría de rastros en archivos versionados, stage, ramas y commits sin subir |
 
+### 6.4 Memoria arquitectónica (`govkit arch`) — ADR-008
+
+Los cuatro repositorios corporativos se convierten en conocimiento **operacional y trazable**:
+- **global-data-governance**: el *qué*.
+- **global-data-platform-core**: el *cómo* ejecutable.
+- **global-data-archimate-models**: el diseño aprobado.
+- **global-metadata-catalog**: el catálogo.
+
+No hay un árbol paralelo: la capa se engancha a la KB, al catálogo, a `sources`, a `verificar`, al MCP y al asistente.
+
+```
+ clones ~/global-* (solo lectura)      snapshots .txt (sin git)
+          │ fetch refs remotas · ls-tree/cat-file origin/main  (nunca pull/checkout/reset; hooks off; sin ejecutar código)
+          ▼
+   índice repo@commit (~/.govkit/arch/index)  ── archivos · secciones · estado normativo · etiqueta · refs · ArchiMate
+          │                                     secretos: solo "SECRET DETECTED" (tipo); IDs de cuenta enmascarados
+          ├─► grafo de relaciones (referencias, rotas, espejos, duplicados divergentes, DP modelados) + matriz curada R1..R16
+          ├─► hechos verificables (arch_facts) ─► contradicciones C-01..C-15 VIGENTE / REVISAR (arch_conflicts ↔ H-18..H-32)
+          ├─► ADR (corporativos · govkit · repo) + Potential ADR (curados + detectados; nunca se crean solos)
+          ├─► mini-resúmenes por unidad (§6) y Architecture Context Map ("qué debo mirar si analizo esta ruta")
+          └─► diff incremental ─► NEW/UPDATED/DEPRECATED/CONFLICTING/UNKNOWN · impacto NONE..CRITICAL (con porqué)
+                                 ─► ARCHITECTURAL CHANGE DETECTED · ARCHITECTURAL KNOWLEDGE UPDATE · análisis obsoletos
+```
+
+| Estado | Regla determinista |
+|---|---|
+| `REQUIRED` | marcas normativas ("debe", "obligatorio", MUST…) en documento oficial en main, o estándar/política |
+| `APPROVED` | ArchiMate main ("oficial y aprobada"), plantilla oficial, documento en main sin marcas |
+| `RECOMMENDED` | "se recomienda", "debería", SHOULD |
+| `IMPLEMENTED` | código, CI (si está deshabilitado se marca), ejemplos, skills |
+| `DEPRECATED` | marca explícita en título/cabecera o sección |
+| `UNKNOWN` | borrador, placeholder, rama no principal, fuente externa |
+
+**Interfaces:**
+- CLI: `govkit arch estado | sync | ingest | contexto | resumen | conflictos | hechos | adr | relaciones | buscar | dp | trazabilidad | secretos | cambios`.
+- MCP: `arch_status`, `arch_context`, `arch_summary`, `arch_search`, `arch_sync`, `arch_changes`, `arch_conflicts`, `arch_facts`, `arch_adrs`, `arch_dp`, `arch_relations`.
+
+El asistente exige:
+- la estructura Contexto · Evidencia · Arquitectura esperada/observada · Diferencias · Impacto · Confianza · Recomendación;
+- las etiquetas epistemológicas;
+- "NO DETERMINADO" cuando no hay evidencia.
+
+### 6.5 Estándar por repositorio: platform-core vs lineamientos — ADR-009
+
+`RepoContext.standard` (`auto` por defecto) elige el estándar:
+- **platform-core** si el repo tiene la copia del estándar (`contracts/_schema/`), la ficha `metadata/data_product.yaml` o contratos ODCS v3;
+- **lineamientos** en caso contrario.
+
+Cómo cambian las reglas:
+- Las reglas declaran `standards:`. 22 reglas del lineamiento no aplican en platform-core.
+- Las reglas **GOV-PCX-001..026** leen el estándar **como dato**, en este orden: copia del repo › clon local › índice arch › fallback destilado.
+- Replican la semántica de `cenco_dc` (Tier 1 + metadata): ficha, rutas medallion, forma ODCS, extensión xCencosud, linaje por capa y bidireccional, `processing` deprecado, physical/catalog, ingestion_origin, copia del estándar, CI, catalog-export y baseline.
+- Suman lo que GOV 06/08/15 exige sobre cualquier contrato: descripciones, compatibilidad, breaking changes con MAJOR y reglas de calidad.
+- `--cenco-dc` ejecuta además el validador oficial (opt-in).
+
 ---
 
 ## 7. Especificación de interfaces
@@ -658,6 +713,8 @@ Durante la adopción, govkit funciona como apoyo **local** del desarrollador sin
 | `govkit kb list\|show\|route\|pack\|graph\|validate` | Operar la base de conocimiento | texto / JSON |
 | `govkit review [path] [--base] [--dry-run] [--model]` | Revisión semántica consultiva (Ollama) | consola / JSON / MD |
 | `govkit ask "pregunta" [--no-llm]` | Q&A sobre el framework con citas | respuesta + fuentes |
+| `govkit lint … --estandar auto\|platform-core\|lineamientos [--cenco-dc]` | Estándar normativo del repo (ADR-009) | reporte |
+| `govkit arch estado\|sync\|ingest\|contexto\|resumen\|conflictos\|hechos\|adr\|relaciones\|buscar\|dp\|trazabilidad\|secretos\|cambios` | Memoria arquitectónica de los repos corporativos (ADR-008) | contexto / alertas / changelog |
 | `govkit doctor` · `govkit selftest` | Diagnóstico e integridad del kit | checks / tests |
 
 ### 7.2 Esquemas (contratos) versionados
@@ -726,6 +783,15 @@ resuelven (detalle y propuesta de resolución en `docs/02-hallazgos-auditoria-do
 6. **Estados de lifecycle**: 06 §7 (7 estados) vs 18 §9 (12) vs catálogo 18 §27 (6, en inglés).
 7. **Tag `repo` apunta a GitLab** mientras 15 §8 define GitHub como system of record.
 8. **Sin política normada de particionamiento** (solo ejemplos en 14 §11.4) — la KB lo marca como [PRÁCTICA].
+9. **Repos corporativos (H-18..H-32, ADR-008/009)** — las contradicciones se re-verifican en cada `govkit arch sync`:
+   - estándar platform-core vs lineamiento (carpetas de contratos, ficha, `fct_`);
+   - contrato semántico vs ODCS 3.1.0;
+   - cuatro vocabularios de ciclo de vida y tres de clasificación;
+   - tipos de repo mdh/sm;
+   - 69 referencias rotas;
+   - CI del estándar deshabilitado;
+   - lineamientos no versionados;
+   - referencia ARTS divergente.
 
 ---
 
@@ -749,16 +815,19 @@ arquitectura/
 ├── docs/00-SAD-sistema-gobernanza-hibrido.md   ← este documento
 ├── docs/01-matriz-reglas.md                     ← generado: govkit rules --format md
 ├── docs/02-hallazgos-auditoria-documental.md
-├── docs/adr/ADR-001 … ADR-007
+├── docs/adr/ADR-001 … ADR-009
 └── govkit/
     ├── install.sh · uninstall.sh · bin/govkit · VERSION
-    ├── rules/catalog.yaml · rules/registry/*.yaml
+    ├── rules/catalog.yaml · rules/registry/*.yaml (arch_sources, arch_context_map, arch_facts, arch_conflicts,
+    │                                              platform_core …)
     ├── schemas/*.schema.json
     ├── kb/KB_00 … KB_21 · kb/_graph.yaml
     ├── lib/govkit/ (engine, declarative, plugins/*, kb/*, llm/*, report/* [json, sarif, md, html], scoring, scaffold,
-    │                fixer [govkit fix], mcpserver [govkit mcp], cli)
+    │                fixer [govkit fix], mcpserver [govkit mcp], standards, cli,
+    │                arch/ [registry, gitio, readers, parsers, index, graph, context, summaries, facts, adr, changes,
+    │                       archimate, search, tracecheck, cli] ← govkit arch)
     ├── templates/data-product/ · templates/github/
     ├── examples/sales-transactions-anl-dp-cl/   ← Data Product de referencia (PASS en gate)
-    ├── tests/ (84 pruebas + fixtures omd/docs/portfolio)
+    ├── tests/ (97 pruebas + fixtures omd/docs/portfolio; arch con repos git sintéticos)
     └── vendor/yaml (PyYAML puro, MIT)
 ```

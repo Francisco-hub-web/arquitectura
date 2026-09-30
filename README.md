@@ -2,25 +2,33 @@
 
 Convierte el **Data & AI Discipline Framework** (principios, estrategia, Data Products, calidad, metadata, seguridad,
 semantic layer, AI/ML, observabilidad, consumo, DataOps, lifecycle, scoring y lineamientos IAM / repositorio /
-OpenMetadata) en un sistema ejecutable de dos capas:
+OpenMetadata) y el estándar ejecutable de **global-data-platform-core** en un sistema ejecutable de dos capas, más una
+**memoria arquitectónica** de los repos corporativos:
 
 1. **Validación determinista** (`govkit lint`): 230 reglas verificables con AST, regex, esquemas, grafo y diff — bloqueantes, en < 1 s.
 2. **Base de conocimiento modular** (`govkit/kb`): 22 mini-contextos para un **LLM local** (Ollama) que revisa solo la
    superficie semántica, con citas verificadas — consultivo.
+3. **Memoria arquitectónica** (`govkit arch`, ADR-008): governance, platform-core, ArchiMate y metadata-catalog como
+   conocimiento trazable (`repo@commit:ruta §sección`), actualizado desde Git en solo lectura:
+   - "qué debo mirar si analizo esta ruta";
+   - alertas de cambios arquitectónicos;
+   - contradicciones re-verificadas;
+   - ADR y Potential ADR;
+   - diseño ArchiMate aprobado vs implementado.
 
 | Documento | Contenido |
 |---|---|
 | [`docs/00-SAD-sistema-gobernanza-hibrido.md`](docs/00-SAD-sistema-gobernanza-hibrido.md) | Documento de Arquitectura de Solución (diagramas, taxonomía, motor, KB, interfaces, roadmap) |
-| [`docs/01-matriz-reglas.md`](docs/01-matriz-reglas.md) | Matriz de las 259 reglas (generada desde el catálogo) |
-| [`docs/02-hallazgos-auditoria-documental.md`](docs/02-hallazgos-auditoria-documental.md) | 17 inconsistencias del framework que impiden validar de forma exacta + resolución propuesta |
-| [`docs/adr/`](docs/adr/) | ADR-001 … ADR-007 |
+| [`docs/01-matriz-reglas.md`](docs/01-matriz-reglas.md) | Matriz de las 285 reglas (generada desde el catálogo) |
+| [`docs/02-hallazgos-auditoria-documental.md`](docs/02-hallazgos-auditoria-documental.md) | 32 inconsistencias (H-01..H-32; H-18..H-32 entre repos corporativos) + resolución propuesta |
+| [`docs/adr/`](docs/adr/) | ADR-001 … ADR-009 |
 | [`govkit/`](govkit/) | Implementación: motor, catálogo, KB, esquemas, plantillas, ejemplo de referencia, tests |
 | [`govkit/CHANGELOG.md`](govkit/CHANGELOG.md) | Historial de versiones del kit |
 
 ## Instalación (macOS / Linux, en `lakehousev2`)
 
 ```bash
-cd ~/Downloads && tar xzf govkit-v1.4.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
+cd ~/Downloads && tar xzf govkit-v2.0.0.tar.gz && cd govkit && ./install.sh && source ~/.zshrc
 ```
 
 El instalador detecta `~/lakehousev2` (o `LAKEHOUSE_DIR=/ruta ./install.sh`), instala en
@@ -59,10 +67,22 @@ pbpaste | govkit                           # pega un error de CI, un SQL o una p
 govkit privado --check                     # verifica que no haya menciones a govkit en lo versionado
 ```
 
+### Memoria arquitectónica (repos corporativos en `~/global-*`, solo lectura)
+
+```bash
+govkit arch sync                           # fetch (solo refs remotas) + qué cambió + alertas + changelog; nunca pull
+govkit arch ingest --snapshot ~/Downloads/*.txt   # alternativa sin git: tus snapshots .txt
+govkit arch contexto contracts/silver/odm/pa_party.yaml   # qué debo mirar si analizo esta ruta, con el porqué
+govkit arch conflictos                     # CONFLICT DETECTED entre fuentes (VIGENTE/REVISAR)
+govkit arch adr --potenciales              # decisiones de facto sin ADR
+govkit arch dp .                           # diseño ArchiMate aprobado vs lo implementado en tu repo
+govkit -p "¿qué cambió en platform-core desde el último análisis y qué me afecta?"
+```
+
 ### Con Claude Code (MCP)
 
 Dentro de `claude`, el agente usa las herramientas de govkit (`lint`, `fix`, `gate`, `kb_context`,
-`verify_semantic_findings`, …) y los prompts `/mcp__govkit__revision_gobernanza`, `/mcp__govkit__nuevo_data_product`
+`verify_semantic_findings`, `arch_context`, `arch_sync`, `arch_conflicts`, `arch_adrs`, `arch_dp`, …) y los prompts `/mcp__govkit__revision_gobernanza`, `/mcp__govkit__nuevo_data_product`
 y `/mcp__govkit__consulta_framework`. Otros clientes MCP: `govkit mcp --print-config`.
 
 ## Construir el tarball

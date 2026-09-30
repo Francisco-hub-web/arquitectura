@@ -21,8 +21,10 @@ def _engine(args, packs, stage=None):
     from govkit.repo import RepoContext
 
     catalog = load_catalog(getattr(args, "catalog", None))
+    if getattr(args, "cenco_dc", False):
+        os.environ["GOVKIT_CENCO_DC"] = "1"
     ctx = RepoContext(args.path, catalog, stage_override=stage or getattr(args, "stage", None),
-                      base_ref=getattr(args, "base", None))
+                      base_ref=getattr(args, "base", None), standard=getattr(args, "estandar", None))
     baseline = load_baseline(args.baseline) if getattr(args, "baseline", None) else None
     if baseline is None and getattr(args, "baseline", "") is not False:
         from govkit.privacy import private_dir
@@ -127,7 +129,7 @@ def cmd_fix(args):
             out["verdict_after"] = after.verdict
         print(json.dumps(out, ensure_ascii=False, indent=2, default=str))
         return 0
-    icon = {"mkdir": "📁", "template": "📄", "set": "✎ ", "placeholder": "➕", "bump": "⬆ ", "manual": "✋"}
+    icon = {"mkdir": "📁", "template": "📄", "pc_ficha": "📄", "set": "✎ ", "placeholder": "➕", "bump": "⬆ ", "manual": "✋"}
     state = {"planned": "", "applied": " ✔", "failed": " ✘", "manual": ""}
     auto = [a for a in actions if a.kind in fixer.AUTO_KINDS]
     manual = [a for a in actions if a.kind == "manual"]
@@ -204,10 +206,24 @@ def cmd_explain(args):
 
 
 def cmd_init(args):
-    from govkit.scaffold import scaffold
+    from govkit.scaffold import scaffold, scaffold_platform_core
 
+    std = args.estandar
+    if std == "auto":
+        from govkit.arch import index as _I
+        from govkit.arch import registry as _R
+        std = "platform-core" if (_I.load("platform-core") or _R.get("platform-core").path.is_dir()) else "lineamientos"
+    if std == "platform-core":
+        dest = scaffold_platform_core(args.domain, args.subdomain, args.type, args.country, args.dest, force=args.force)
+        print(f"✅ Data Product (estándar platform-core) creado en {dest}\n"
+              f"   Copia desde el baseline oficial (global-data-platform-core/data-products-baseline): contracts/_schema/, "
+              f"scripts/ y .github/workflows/ (bootstrap.sh)\n   Siguiente paso: cd {dest} && govkit lint")
+        return 0
+    if args.type not in ("txd", "anl"):
+        print("govkit: con el estándar lineamientos el tipo debe ser txd | anl", file=sys.stderr)
+        return 2
     dest = scaffold(args.domain, args.subdomain, args.type, args.country, args.dest, owner=args.owner, force=args.force)
-    print(f"✅ Data Product creado en {dest}\n   Siguiente paso: cd {dest} && govkit lint")
+    print(f"✅ Data Product (estándar lineamientos) creado en {dest}\n   Siguiente paso: cd {dest} && govkit lint")
     return 0
 
 
@@ -283,6 +299,17 @@ def cmd_doctor(args):
     else:
         print("   El motor determinista funciona sin LLM. Para revisión semántica: https://ollama.com → "
               f"`ollama pull {client.model}`")
+    try:
+        from govkit.arch import gitio, home, load_state, registry
+        st = load_state()["sources"]
+        for src in registry.sources().values():
+            s = st.get(src.id) or {}
+            clon = "clon ✔" if gitio.is_repo(src.path) else "sin clon"
+            ana = f"analizado @{str(s['commit'])[:7]} ({s.get('origin')})" if s.get("commit") else "sin analizar"
+            print(("✅" if s.get("commit") else "⚠️ ") + f" arch · {src.repo}: {clon} ({src.path}) · {ana}")
+        print(f"   Memoria arquitectónica en {home()} · `govkit arch sync` / `govkit arch ingest --snapshot`")
+    except Exception as exc:  # noqa: BLE001 - diagnóstico no crítico
+        print(f"⚠️  arch: {type(exc).__name__}: {exc}")
     return 0
 
 
@@ -450,6 +477,12 @@ def cmd_verificar(args):
     return claims.verify(claim, use_llm=not args.sin_ia, save=not args.no_guardar)
 
 
+def cmd_arch(args):
+    from govkit.arch import cli as arch_cli
+
+    return arch_cli.main(args.args or ["-h"])
+
+
 def cmd_selftest(args):
     import unittest
 
@@ -472,6 +505,10 @@ def _common_lint(p, with_path=True):
     p.add_argument("--profile", choices=["pre-commit", "pr", "gate", "catalog", "periodic", "runtime"],
                    help="evaluar solo reglas de ese punto de control")
     p.add_argument("--fail-on", choices=["BLOCKER", "HIGH", "MEDIUM", "LOW"], default="BLOCKER")
+    p.add_argument("--estandar", "--standard", dest="estandar", choices=["auto", "platform-core", "lineamientos"],
+                   help="estándar normativo (default auto: platform-core si el repo tiene sus marcadores)")
+    p.add_argument("--cenco-dc", action="store_true",
+                   help="además ejecutar el validador oficial cenco_dc desde el clon local de platform-core")
     p.add_argument("--baseline", help="archivo baseline (hallazgos preexistentes que no bloquean)")
     p.add_argument("--gh-summary", action="store_true", help="agregar resumen Markdown a $GITHUB_STEP_SUMMARY")
     p.add_argument("--verbose", "-v", action="store_true")
@@ -542,7 +579,10 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("init", help="crear un repositorio de Data Product conforme al estándar")
     p.add_argument("--domain", required=True)
     p.add_argument("--subdomain", required=True)
-    p.add_argument("--type", choices=["txd", "anl"], default="anl")
+    p.add_argument("--type", choices=["txd", "anl", "mdh", "sm", "none"], default="anl",
+                   help="código de tipo (lineamiento: txd|anl; en ArchiMate aprobado también mdh|sm o sin tipo)")
+    p.add_argument("--estandar", "--standard", dest="estandar", choices=["auto", "platform-core", "lineamientos"],
+                   default="auto", help="estructura a generar (auto: platform-core si está ingerido/clonado)")
     p.add_argument("--country", default="cl")
     p.add_argument("--owner", default=None, help="email del business owner")
     p.add_argument("--dest", default=".", help="directorio padre")
@@ -629,6 +669,11 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--print-config", action="store_true", help="mostrar cómo registrarlo en los clientes")
     p.set_defaults(fn=cmd_mcp)
 
+    p = sub.add_parser("arch", add_help=False, help="memoria arquitectónica: repos corporativos (governance, platform-core, ArchiMate, "
+                                    "metadata-catalog) → contexto por ruta, cambios, conflictos, ADR")
+    p.add_argument("args", nargs=argparse.REMAINDER, help="subcomando de arch (govkit arch -h)")
+    p.set_defaults(fn=cmd_arch)
+
     p = sub.add_parser("selftest", help="ejecutar la suite de pruebas del kit")
     p.add_argument("--verbose", "-v", action="store_true")
     p.set_defaults(fn=cmd_selftest)
@@ -686,6 +731,15 @@ def _free_text(argv) -> Optional[int]:
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] == ["arch"]:  # subcomandos propios (incluido -h) sin pasar por el parser principal
+        from govkit.arch import cli as arch_cli
+        try:
+            return arch_cli.main(argv[1:] or ["-h"])
+        except SystemExit as exc:
+            return int(exc.code or 0)
+        except FileNotFoundError as exc:
+            print(f"govkit arch: {exc}", file=sys.stderr)
+            return 2
     try:
         free = _free_text(argv)
     except KeyboardInterrupt:

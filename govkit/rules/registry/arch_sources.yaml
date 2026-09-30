@@ -1,0 +1,144 @@
+# Fuentes arquitectónicas corporativas de la capa "architectural memory" (govkit arch · ADR-008).
+# Solo METADATOS: el contenido se lee en local (clon git en solo lectura o snapshot .txt) y el índice generado vive en
+# ~/.govkit/arch (nunca versionado). Rutas locales: ~/.govkit/arch/config.yaml (`govkit arch config`).
+version: 1
+
+# Jerarquía de autoridad (SUPER PROMPT §4; menor número = más autoridad). La fecha/commit/estado del documento
+# se consideran aparte: una fuente de más autoridad pero en borrador queda UNKNOWN.
+hierarchy:
+  adr: 1
+  official_doc: 2
+  standard: 3
+  policy: 3
+  archimate: 4
+  repo_doc: 5
+  skill: 5
+  code: 6
+  ci: 6
+  template: 7
+  example: 7
+  index: 5
+  asset: 8
+
+sources:
+  - id: governance
+    repo: global-data-governance
+    short: GOV
+    role: "el QUÉ: marco normativo de datos (documentos 01-19, detalle semántico, ARTS, skill EA)"
+    default_path: ~/global-data-governance
+    branch: main
+    main_status: OFFICIAL          # main = oficial; secciones en borrador/pendiente → UNKNOWN
+    kinds:
+      - {glob: "docs/**/*.md", kind: official_doc}
+      - {glob: "specs/**", kind: standard}
+      - {glob: "policies/**", kind: policy}
+      - {glob: "skills/**/*.py", kind: code}
+      - {glob: "skills/**", kind: skill}
+      - {glob: "scripts/**", kind: code}
+      - {glob: ".github/workflows/**", kind: ci}
+      - {glob: "**/README.md", kind: repo_doc}
+    impact:
+      - {glob: "docs/data-framework/*.md", level: HIGH, why: "documento normativo del framework"}
+      - {glob: "docs/data-framework/details/**", level: HIGH, why: "detalle normativo (proceso/nomenclatura)"}
+      - {glob: "specs/**", level: HIGH, why: "principios estructurados (fuente de reglas)"}
+      - {glob: "policies/**", level: HIGH, why: "política corporativa"}
+      - {glob: "skills/**", level: MEDIUM, why: "skill/agente de arquitectura"}
+      - {glob: "README.md", level: MEDIUM, why: "estructura y flujo de ramas del repo"}
+      - {glob: "scripts/**", level: LOW, why: "tooling de publicación"}
+    # Nombres reales de los documentos del framework (validación de trazabilidad de reglas/KB: `govkit arch trazabilidad`).
+    documents:
+      - 01-data-principles.md
+      - 02-data-strategy.md
+      - 02.1-business-capability-alignment.md
+      - 02.2-use-case-definition.md
+      - 06-data-product-definition.md
+      - 08-data-quality-framework.md
+      - 09-metadata-governance.md
+      - 10-data-security-framework.md
+      - 11-semantic-layer-framework.md
+      - 12-ai-ml-dataframework.md
+      - 13-data-observability.md
+      - 14-data-consumption-exploitation-framework.md
+      - 15-dataops-cicd.md
+      - 18-data-product-lifecycle.md
+      - 19-scoring-model.md
+
+  - id: platform-core
+    repo: global-data-platform-core
+    short: PC
+    role: "el CÓMO ejecutable: estándar de contratos ODCS + perfil xCencosud, baseline de Data Products, validadores"
+    default_path: ~/global-data-platform-core
+    branch: main
+    main_status: OFFICIAL
+    kinds:
+      - {glob: "framework/*/specs/**/*.py", kind: code}
+      - {glob: "framework/*/specs/**", kind: standard}
+      - {glob: "data-products-baseline/contracts/_schema/**", kind: standard}
+      - {glob: "framework/*/docs/**/*.md", kind: official_doc}
+      - {glob: "framework/*/governance/**", kind: policy}
+      - {glob: "framework/**/tools/**", kind: code}
+      - {glob: "data-products-baseline/contracts/_templates/**", kind: template}
+      - {glob: "data-products-baseline/contracts/_examples/**", kind: example}
+      - {glob: "data-products-baseline/contracts/policies/**", kind: template}
+      - {glob: "data-products-baseline/metadata/*.yaml", kind: template}
+      - {glob: "**/.github/workflows/**", kind: ci}
+      - {glob: "**/*.py", kind: code}
+      - {glob: "**/*.sh", kind: code}
+      - {glob: "platform.manifest.yaml", kind: index}
+      - {glob: "policies/**", kind: policy}
+      - {glob: "skills/**", kind: skill}
+      - {glob: "**/*.md", kind: repo_doc}
+    impact:
+      - {glob: "framework/*/specs/schemas/**", level: CRITICAL, why: "estándar ejecutable (schema/manifest/estándar de arquitectura)"}
+      - {glob: "data-products-baseline/contracts/_schema/**", level: CRITICAL, why: "copia del estándar que heredan los Data Products"}
+      - {glob: "data-products-baseline/scripts/**", level: HIGH, why: "validadores que corre el CI de cada Data Product"}
+      - {glob: "data-products-baseline/.github/workflows/**", level: HIGH, why: "CI que se copia a cada Data Product"}
+      - {glob: "framework/*/tools/**", level: HIGH, why: "validador corporativo (cenco_dc)"}
+      - {glob: "framework/*/docs/**", level: HIGH, why: "documentación normativa del estándar"}
+      - {glob: "framework/lakehouse/**", level: HIGH, why: "nomenclatura ARTS/ODM y patrones lakehouse"}
+      - {glob: "data-products-baseline/metadata/**", level: HIGH, why: "ficha del Data Product (plantilla)"}
+      - {glob: "data-products-baseline/contracts/_templates/**", level: MEDIUM, why: "plantillas de contratos por capa"}
+      - {glob: "data-products-baseline/contracts/_examples/**", level: MEDIUM, why: "ejemplos de referencia"}
+      - {glob: "data-products-baseline/**", level: MEDIUM, why: "estructura del scaffold de Data Products"}
+      - {glob: ".github/workflows/**", level: MEDIUM, why: "CI de plataforma"}
+      - {glob: "policies/**", level: HIGH, why: "política de plataforma"}
+      - {glob: "platform.manifest.yaml", level: MEDIUM, why: "índice de la plataforma para agentes"}
+      - {glob: "skills/**", level: MEDIUM, why: "skill/agente de plataforma"}
+
+  - id: archimate
+    repo: global-data-archimate-models
+    short: AM
+    role: "modelo ArchiMate oficial de la plataforma y de cada Data Product (HLD/MLD/LLD)"
+    default_path: ~/global-data-archimate-models
+    branch: main
+    main_status: APPROVED          # README del repo: main = "Arquitectura de Datos oficial y aprobada"
+    signal_branches: ["dp/*", "domain/*", "model/*", "pattern/*"]
+    kinds:
+      - {glob: "model/**", kind: archimate}
+      - {glob: "**/README.md", kind: repo_doc}
+    impact:
+      - {glob: "model/diagrams/**", level: HIGH, why: "vista de arquitectura aprobada"}
+      - {glob: "model/relations/**", level: MEDIUM, why: "relaciones del modelo"}
+      - {glob: "model/**", level: MEDIUM, why: "elementos del modelo"}
+      - {glob: "README.md", level: MEDIUM, why: "flujo de aprobación y ramas del modelo"}
+
+  - id: metadata-catalog
+    repo: global-metadata-catalog
+    short: MC
+    role: "catálogo corporativo: glosario, ingesta de metadata, clasificación y RBAC (destino del catalog-export)"
+    default_path: ~/global-metadata-catalog
+    branch: main
+    main_status: OFFICIAL
+    signal_branches: ["proposal/*", "update/*"]
+    kinds:
+      - {glob: "specs/**", kind: standard}
+      - {glob: "policies/**", kind: policy}
+      - {glob: ".github/workflows/**", kind: ci}
+      - {glob: "**/*.md", kind: repo_doc}
+    impact:
+      - {glob: "specs/**", level: HIGH, why: "glosario / specs del catálogo"}
+      - {glob: "policies/**", level: HIGH, why: "política de catálogo, clasificación o RBAC"}
+      - {glob: "README.md", level: MEDIUM, why: "estructura y ramas del catálogo"}
+
+# Ramas que en cualquier fuente se leen como señales tempranas (UNKNOWN / PROPUESTO), nunca como norma.
+signal_branches: ["proposal/*", "update/*", "feat/*", "dp/*", "domain/*", "model/*", "pattern/*", "docs/*"]

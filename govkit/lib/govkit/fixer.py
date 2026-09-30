@@ -25,7 +25,7 @@ from govkit.yamlloc import dig, split_path
 PLACEHOLDER = "<COMPLETAR>"
 _PLAIN = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_./@:+-]*$")
 _YAML_SPECIAL = {"true", "false", "yes", "no", "on", "off", "null", "~", "y", "n"}
-AUTO_KINDS = ("mkdir", "template", "set", "placeholder", "bump")
+AUTO_KINDS = ("mkdir", "template", "pc_ficha", "set", "placeholder", "bump")
 # Archivos con efectos automáticos en el GitHub corporativo (ejecutan CI o asignan revisores obligatorios):
 # nunca se crean solos; quedan como acción manual para que el equipo use sus versiones corporativas.
 OUTWARD = ("CODEOWNERS", ".github/CODEOWNERS", ".github/workflows/")
@@ -265,6 +265,11 @@ def plan(res, placeholders: bool = True, overrides: Optional[Dict[str, str]] = N
             if target.endswith("/") or target.rstrip("/") in EMPTY_DIRS:
                 add(Action("mkdir", target.rstrip("/"), "crear carpeta estándar (+ .gitkeep)"), v.rule_id)
                 continue
+            if fx.get("template") == "platform_core_ficha":
+                if not ctx.exists(target):
+                    add(Action("pc_ficha", target, "crear la ficha platform-core desde la plantilla del baseline "
+                               "(marcas <COMPLETAR>)"), v.rule_id)
+                continue
             rx = [glob_to_regex(g) for g in expected]
             hit = next((p for p in templates if any(r.match(p) for r in rx) and not ctx.exists(p)), None)
             if hit and hit.startswith(OUTWARD):
@@ -305,7 +310,7 @@ def plan(res, placeholders: bool = True, overrides: Optional[Dict[str, str]] = N
                        status="manual"), v.rule_id)
         else:
             add(Action("manual", rel, v.remediation or f"acción `{t}` requiere decisión humana", status="manual"), v.rule_id)
-    order = {"template": 0, "mkdir": 1, "set": 2, "bump": 3, "placeholder": 4, "manual": 5}
+    order = {"template": 0, "pc_ficha": 0, "mkdir": 1, "set": 2, "bump": 3, "placeholder": 4, "manual": 5}
     return sorted(actions.values(), key=lambda a: (order[a.kind], a.file, a.key or ""))
 
 
@@ -326,6 +331,16 @@ def apply(ctx, actions: List[Action], overrides: Optional[Dict[str, str]] = None
                 target.mkdir(parents=True, exist_ok=True)
                 if not any(target.iterdir()):
                     (target / ".gitkeep").write_text("", encoding="utf-8")
+                a.status = "applied"
+            elif a.kind == "pc_ficha":
+                if target.exists():
+                    a.status, a.reason = "failed", "el archivo ya existe"
+                    continue
+                from govkit.plugins.platform_core import ficha_template
+                v = vars_ or {}
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(ficha_template(v.get("repo") or ctx.repo_name, v.get("domain") or "<COMPLETAR dominio>",
+                                                 v.get("country") or "cl"), encoding="utf-8")
                 a.status = "applied"
             elif a.kind == "template":
                 if target.exists():

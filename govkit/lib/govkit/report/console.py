@@ -20,7 +20,7 @@ def render(res, verbose: bool = False, show_score: bool = True, stream=None, pac
     stream = stream or sys.stdout
     color = hasattr(stream, "isatty") and stream.isatty() and not os.environ.get("NO_COLOR")
     ctx = res.ctx
-    scope = (f"estado: {ctx.stage} · grupo: {ctx.stage_group}" if "dp" in packs
+    scope = (f"estándar: {ctx.standard} · estado: {ctx.stage} · grupo: {ctx.stage_group}" if "dp" in packs
              else f"pack: {', '.join(packs)} · {ctx.root.name}")
     lines = [_c("bold", f"govkit · {ctx.repo_name if 'dp' in packs else ctx.root.name}", color) +
              _c("dim", f"  ({scope} · ruleset {res.catalog.get('ruleset_version')} · {res.duration_ms} ms)", color)]

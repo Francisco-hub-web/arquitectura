@@ -43,6 +43,21 @@ Severidad: **A** = bloquea una validación exacta · **M** = genera ambigüedad 
 | H-15 | B | **Numeración de secciones** | 08: §10.6 antes de §10.5. 14: salta de §18 a §21 (§17 comentado). 19: bloques §23-§25 comentados y §23 repetida; salta a §39. | `GOV-DOC-003` los detecta. | Renumerar: las reglas citan `§N`, la numeración es parte de la trazabilidad. |
 | H-16 | B | **Pendientes abiertos que afectan reglas** | 09 (pendiente validación Gobierno de Datos), 10 (pendiente Seguridad Informática), 12 §19, 19 (Draft), 02.2 (Draft v2.0), OMD v0.2 (conector S3, CloudWatch/KMS, nomenclatura de servicios, Redshift, Lake Formation). | KB_20 y KB_21 con `status: borrador`; `GOV-DOC-005` inventaría pendientes. | Asignar owner y fecha a cada pendiente. |
 | H-17 | B | **Conceptos de consumo no reflejados en la ficha** | 14 §8.3 introduce "Data Product Maestro" vs "Analítico de Consumo" y 12 patrones con 12 dimensiones obligatorias; 06 no los incluye. | `spec.role`, `spec.consumption_pattern`, `spec.consumption.*` en la ficha canónica. | Agregar a 06 un bloque de "rol y patrón de consumo". |
+| H-18 | A | **Carpetas de contratos: lineamiento vs platform-core** (C-01) | Lineamiento: `contracts/input|output`. platform-core `check_data_contracts_architecture_standard.py` prohíbe `contracts/input/` y `silver/stg|wap`. | Estándar `auto` (ADR-009): en repos platform-core aplican GOV-PCX-006 y no GOV-CTR-001/002, GOV-STR-002. | Decidir si platform-core reemplaza el lineamiento (PA-02). |
+| H-19 | A | **Ubicación y esquema de la ficha del DP** (C-02) | govkit/ADR-006: `metadata/catalog/data_product.yaml` (spec.*). platform-core: `metadata/data_product.yaml` (plano, G-CORP-01), exigida por el CI. | Ficha según estándar; GOV-PCX-001..005. | Ficha canónica y mapeo de bloques de 06 que no tiene (PA-05). |
+| H-20 | B | **Manifest de perfil desactualizado en la plantilla de ficha** (C-03) | `profile-manifest.yaml` 1.2.0 vs plantilla `odcs.profile_manifest_version: "1.1.0"`. | GOV-PCX-003 lo reporta como LOW. | Corrección upstream en platform-core. |
+| H-21 | M | **Tipos de repo mdh / sm / sin tipo** (C-04, amplía H-04) | ArchiMate main (aprobado): `*-master-{txd|mdh|sm}-dp-cl`, `customer-master-dp-cl`. | GOV-PCX-026 (LOW/INFO) acepta el patrón observado; GOV-NAM-001 solo en lineamientos. | Tabla oficial de códigos de tipo (PA-04). |
+| H-22 | A | **Contrato semántico: proceso GOV vs ODCS v3.1.0** (C-05) | Proceso capa semántica: `dataProduct` obligatorio, `.odcs.yaml`. platform-core: `dataProduct` eliminado en v3.1.0. | Sin regla hasta decidir; `govkit arch contexto contracts/semantic/…` muestra ambas fuentes. | Especificación única (PA-08). |
+| H-23 | M | **Vocabularios de ciclo de vida** (C-06, amplía H-06) | 18 §9 (12) · semántico (4) · contrato PC (5) · ficha PC (3). | Mapeo ficha PC → estados govkit (`lifecycle_map`). | Mapeo oficial contrato ↔ producto ↔ catálogo (PA-07). |
+| H-24 | M | **Vocabularios de clasificación** (C-07) | GOV 10 (Público/Interno/Confidencial/Sensible-PII) · L0–L4 (Ley 21.719) · `pii_classification` none/personal/sensitive. | GOV-PCX-011 exige `pii_classification ≠ none` ante nombres PII. | Tabla de equivalencias (PA-06). |
+| H-25 | M | **Nomenclatura de columnas en Silver ODM** (C-08) | ARTS ODM en MAYÚSCULA (`ID_…`) vs ejemplo ODM de PC `party_id` y GOV-NAM-014. | GOV-PCX-012 LOW (snake_case) marcado como ambiguo. | Alcance de ARTS por capa (PA-09). |
+| H-26 | B | **Taxonomía EA con numeraciones distintas** (C-09) | `taxonomy.md` ("2 - Omnichannel") vs `ea-domains_map.json` ("2 - Customer Relations Management"). | Informativo. | Taxonomía canónica (PA-12). |
+| H-27 | M | **Ramas develop/main en el CI oficial del DP** (C-10, amplía H-01) | 15 §15 trunk-based vs `validate-contracts.yaml` `branches: [develop, main]`. | Sin cambio de reglas. | Confirmar estrategia en repos DP. |
+| H-28 | M | **Referencias rotas en los repos corporativos** (C-11) | 69 referencias a documentos inexistentes o renumerados (03, 04, 05, 07, 14-dataops, 15-scoring, 16, 17, `12-ai-ml-data-framework.md`, `data-framework-draft/`, `data-architect.md`). | `govkit arch relaciones --rotas`; govkit corrigió su propia cita al documento 12. | Renumerar en un PR único (amplía H-03). |
+| H-29 | M | **Estándar de contratos sin enforcement en plataforma** (C-12) | `check-data-contracts-standard.yaml` con `if: false`; checkov/terraform vacíos. | Estado IMPLEMENTED (deshabilitado), no REQUIRED. | Fecha de reactivación. |
+| H-30 | A | **Prefijo de hechos Gold: fact_ vs fct_** (C-13) | Lineamiento/govkit `fact_*` vs `gold-contract-patterns.md` `fct_<process>`. | GOV-PCX-009 (dim_/fct_) en platform-core; GOV-NAM-005/006 solo en lineamientos. | Confirmar reemplazo del lineamiento. |
+| H-31 | M | **Lineamientos fuera de los repos corporativos** (C-14) | 57 reglas citan `lineamientos/*`; ningún repo los contiene; `policies/cloud-naming-conventions.md` vacío. | `govkit arch trazabilidad` las marca con procedencia DESCONOCIDA. | Publicar los lineamientos versionados. |
+| H-32 | B | **Referencia ARTS ODM divergente** (C-15) | governance (2026-09-29) incluye *Day Calendar (DY)*; platform-core (generada desde .xlsx, 2026-09-01) no. | Detectado automáticamente como `duplicate_divergent`. | Fuente canónica (PA-09). |
 
 ## 3. Impacto en el catálogo
 
@@ -56,3 +71,13 @@ Severidad: **A** = bloquea una validación exacta · **M** = genera ambigüedad 
 | H-06 | GOV-LCY-001, GOV-LCY-004 |
 | H-12 | GOV-NAM-002, GOV-MET-004/005, GOV-SML-003, GOV-BIZ-005, GOV-IAM-004 (códigos de dominio) |
 | H-13 | Pre-score (`govkit score`), GOV-LCY-005, GOV-SCO-002 |
+| H-18 | GOV-CTR-001/002/003-007/009/012/013, GOV-STR-002, GOV-MET-016 (lineamientos) · GOV-PCX-006 |
+| H-19 | GOV-DPD-001/027/028, GOV-MET-012 (lineamientos) · GOV-PCX-001..005 |
+| H-21 | GOV-NAM-001 (lineamientos) · GOV-PCX-026 |
+| H-24 | GOV-SEC-001 · GOV-PCX-011 |
+| H-25 | GOV-NAM-014 · GOV-PCX-012 |
+| H-28 | GOV-DOC-001 · citas de GOV-AIM-*, GOV-DOC-005, KB_15, KB_16 (corregidas) |
+| H-30 | GOV-NAM-005/006 (lineamientos) · GOV-PCX-009 |
+
+> H-18..H-32 provienen de la capa de memoria arquitectónica (ADR-008): su estado vivo (VIGENTE / REVISAR según hechos
+> re-verificados en cada `govkit arch sync`) está en `govkit arch conflictos` (rules/registry/arch_conflicts.yaml).

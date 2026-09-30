@@ -1,21 +1,21 @@
 # Matriz de Reglas de Gobernanza (generada)
 
-> Generado con `govkit rules --format md` desde `rules/catalog.yaml` · ruleset `2026.09.1` · 259 reglas. No editar a mano: el catálogo es la fuente única de verdad.
+> Generado con `govkit rules --format md` desde `rules/catalog.yaml` · ruleset `2026.10.0` · 285 reglas. No editar a mano: el catálogo es la fuente única de verdad.
 
 ## 1. Matriz de dos ejes: dominio de gobierno × naturaleza de validación
 
 | Dominio | D · Determinista | H · Híbrida | S · Semántica | O · Organizacional | Total | % automatizable (D+H) |
 |---|---:|---:|---:|---:|---:|---:|
-| Estructura de repositorio | 12 | 1 | 0 | 0 | 13 | 100% |
-| Nomenclatura | 14 | 0 | 0 | 0 | 14 | 100% |
-| Definición de Data Product | 27 | 1 | 0 | 0 | 28 | 100% |
-| Data Contracts | 13 | 1 | 1 | 0 | 15 | 93% |
-| Metadata y catálogo | 15 | 1 | 1 | 1 | 18 | 89% |
-| Calidad de datos | 13 | 2 | 1 | 1 | 17 | 88% |
-| Seguridad y privacidad | 12 | 2 | 2 | 2 | 18 | 78% |
+| Estructura de repositorio | 14 | 1 | 0 | 0 | 15 | 100% |
+| Nomenclatura | 17 | 0 | 0 | 0 | 17 | 100% |
+| Definición de Data Product | 29 | 1 | 0 | 0 | 30 | 100% |
+| Data Contracts | 25 | 2 | 1 | 0 | 28 | 96% |
+| Metadata y catálogo | 16 | 1 | 1 | 1 | 19 | 89% |
+| Calidad de datos | 14 | 2 | 1 | 1 | 18 | 89% |
+| Seguridad y privacidad | 13 | 2 | 2 | 2 | 19 | 79% |
 | IAM | 14 | 1 | 0 | 0 | 15 | 100% |
-| DataOps y CI/CD | 12 | 0 | 0 | 1 | 13 | 92% |
-| Arquitectura y modelado | 8 | 1 | 5 | 0 | 14 | 64% |
+| DataOps y CI/CD | 13 | 0 | 0 | 1 | 14 | 93% |
+| Arquitectura y modelado | 10 | 1 | 5 | 0 | 16 | 69% |
 | Semantic layer y métricas | 7 | 1 | 1 | 1 | 10 | 80% |
 | Consumo y explotación | 11 | 1 | 2 | 0 | 14 | 86% |
 | AI / ML / GenAI | 10 | 0 | 2 | 0 | 12 | 83% |
@@ -26,7 +26,7 @@
 | OpenMetadata (pack omd) | 14 | 0 | 0 | 1 | 15 | 93% |
 | Documentación del framework (pack docs) | 5 | 0 | 0 | 0 | 5 | 100% |
 | Portafolio cross-repo (pack portfolio) | 6 | 0 | 0 | 0 | 6 | 100% |
-| **Total** | **217** | **13** | **19** | **10** | **259** | **89%** |
+| **Total** | **242** | **14** | **19** | **10** | **285** | **90%** |
 
 Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + adecuación semántica) · **S** = Semántica (LLM + KB) · **O** = Organizacional / proceso (revisión humana)
 
@@ -36,14 +36,15 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 |---|---:|---:|---:|---:|---:|---:|
 | `ast` | 2 | 2 | 0 | 0 | 0 | 0 |
 | `count` | 0 | 7 | 7 | 1 | 0 | 0 |
-| `diff` | 0 | 3 | 0 | 0 | 0 | 0 |
-| `graph` | 0 | 29 | 12 | 7 | 6 | 0 |
+| `diff` | 1 | 5 | 0 | 0 | 0 | 0 |
+| `exists` | 4 | 4 | 0 | 0 | 0 | 0 |
+| `graph` | 4 | 33 | 12 | 7 | 6 | 0 |
 | `human` | 0 | 1 | 0 | 0 | 5 | 4 |
 | `llm` | 0 | 19 | 0 | 0 | 0 | 0 |
 | `path` | 0 | 21 | 10 | 2 | 0 | 0 |
 | `policy` | 1 | 11 | 0 | 0 | 0 | 0 |
-| `regex` | 10 | 48 | 1 | 3 | 1 | 0 |
-| `schema` | 11 | 83 | 25 | 7 | 1 | 0 |
+| `regex` | 14 | 53 | 1 | 3 | 1 | 0 |
+| `schema` | 18 | 94 | 25 | 7 | 1 | 0 |
 | `threshold` | 1 | 1 | 0 | 0 | 3 | 0 |
 
 ## 3. Catálogo completo por dominio
@@ -65,6 +66,8 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-STR-011` | Formato de ADRs | D | LOW | — | regex | pr | lineamientos/estructura-repositorio.md docs/ | KB_18 |
 | `GOV-STR-012` | Modelo lógico/físico documentado (DBML) | D | MEDIUM | ideacion:OFF, salida:LOW | path | pr | lineamientos/estructura-repositorio.md docs/dbdiagram | KB_07 |
 | `GOV-STR-013` | Artefactos YAML/JSON sintácticamente válidos | D | BLOCKER | — | schema | pre-commit, pr | 15-dataops-cicd.md §16 | KB_18 |
+| `GOV-PCX-006` | Contratos solo en carpetas medallion (sin contracts/input\|output, silver/stg\|wap) | D | BLOCKER | — | regex | pr, pre-commit | global-data-platform-core/framework/data-contracts/docs/folder-conventions.md Rutas | KB_05, KB_06 |
+| `GOV-PCX-020` | Estructura del baseline platform-core | D | LOW | ideacion:OFF, salida:LOW | exists | pr, pre-commit | global-data-platform-core/data-products-baseline/README.md Estructura | KB_18 |
 
 ### Nomenclatura
 
@@ -84,6 +87,9 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-NAM-012` | Databases Glue dlk_{zona}_{pais}_{dominio}_{nombre} | D | MEDIUM | ideacion:LOW, diseno:MEDIUM | regex | pr | lineamientos/iam-roles-policies.md Regla de Wildcard | KB_11 |
 | `GOV-NAM-013` | Nombre del Data Product en kebab-case | D | LOW | — | regex | pr | 09-metadata-governance.md §16 | KB_09 |
 | `GOV-NAM-014` | Campos de contratos en snake_case | D | LOW | ideacion:LOW, diseno:MEDIUM | regex | pre-commit, pr | 06-data-product-definition.md §11 | KB_05 |
+| `GOV-PCX-009` | Contratos Gold nombrados dim_* / fct_* (platform-core) | D | MEDIUM | — | regex | pr, pre-commit | global-data-platform-core/framework/data-contracts/docs/gold-contract-patterns.md §2 Dim vs fact | KB_07, KB_05 |
+| `GOV-PCX-012` | Propiedades del contrato en snake_case | D | LOW | — | regex | pr, pre-commit | global-data-platform-core/data-products-baseline/contracts/_examples/silver/odm/pa_party.example.yaml schema[].properties[].name | KB_07 |
+| `GOV-PCX-026` | Nombre del repositorio de Data Product (patrón observado en el diseño aprobado) | D | LOW | — | regex | pr | global-data-archimate-models/README.md Ramas de Productos de Datos | KB_18 |
 
 ### Definición de Data Product
 
@@ -117,6 +123,8 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-DPD-026` | Descripción funcional útil | H | MEDIUM | operacion:HIGH, gate:HIGH | regex | pr, catalog | 09-metadata-governance.md §22 | KB_09, KB_04 |
 | `GOV-DPD-027` | Definition of Ready (entrada a desarrollo) | D | BLOCKER | ideacion:OFF, diseno:MEDIUM, salida:OFF | graph | gate | 06-data-product-definition.md §26 Definition of Ready | KB_04, KB_19 |
 | `GOV-DPD-028` | Definition of Done (listo para producción) | D | BLOCKER | ideacion:OFF, diseno:OFF, desarrollo:LOW, salida:OFF | graph | gate | 06-data-product-definition.md §26 Definition of Done | KB_04, KB_19, KB_20 |
+| `GOV-PCX-001` | Ficha del Data Product en metadata/data_product.yaml (platform-core) | D | HIGH | ideacion:OFF, diseno:LOW, desarrollo:MEDIUM, gate:BLOCKER, operacion:BLOCKER, salida:LOW | exists | pr, pre-commit | global-data-platform-core/data-products-baseline/scripts/check_data_contracts_architecture_standard.py check_product | KB_04, KB_09 |
+| `GOV-PCX-002` | Ficha platform-core: campos obligatorios completos y enums válidos | D | HIGH | ideacion:LOW, diseno:MEDIUM, desarrollo:HIGH, gate:HIGH, operacion:HIGH, salida:LOW | schema | pr, pre-commit | global-data-platform-core/data-products-baseline/metadata/data_product.yaml G-CORP-01 | KB_04, KB_03 |
 
 ### Data Contracts
 
@@ -137,6 +145,19 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-CTR-013` | Campos del contrato descritos | H | MEDIUM | ideacion:LOW, diseno:MEDIUM | schema | pr | 06-data-product-definition.md §11 | KB_05, KB_09 |
 | `GOV-CTR-014` | Cambio semántico no declarado | S | HIGH | — | llm | pr | 15-dataops-cicd.md §17, §20 | KB_05 |
 | `GOV-CTR-015` | Dependencias entre productos por contrato versionado | D | HIGH | — | graph | pr | 15-dataops-cicd.md §17 | KB_05 |
+| `GOV-PCX-003` | Ficha platform-core: bloque odcs en el perfil vigente | D | HIGH | — | schema | pr, pre-commit | global-data-platform-core/framework/data-contracts/tools/cenco_dc/src/cenco_dc/validation/metadata/registry.py run_metadata_validation | KB_05 |
+| `GOV-PCX-004` | Ficha platform-core: data_contracts[] registra cada contrato existente | D | HIGH | ideacion:LOW, diseno:MEDIUM | graph | pr, pre-commit | global-data-platform-core/framework/data-contracts/docs/metadata-registry.md data_contracts[] | KB_05, KB_09 |
+| `GOV-PCX-005` | Contratos: data_product_repo = data_product_id de la ficha | D | HIGH | — | graph | pr, pre-commit | global-data-platform-core/framework/data-contracts/tools/cenco_dc/src/cenco_dc/validation/tier1/extension_required.py ExtensionRequiredRule | KB_05 |
+| `GOV-PCX-007` | Contrato ODCS v3.1.0 bien formado (identidad, status, sin claves raíz prohibidas) | D | HIGH | — | schema | pr, pre-commit | global-data-platform-core/framework/data-contracts/specs/schemas/cencosud-odcs-minimal.schema.json required / status / forbidden_root_keys | KB_05 |
+| `GOV-PCX-008` | Extensión xCencosud presente y coherente con la ruta (layer/medallion_zone) | D | HIGH | — | schema | pr, pre-commit | global-data-platform-core/framework/data-contracts/docs/x-cencosud-physical-model.md customProperties.xCencosud | KB_05, KB_06 |
+| `GOV-PCX-010` | Bloque processing deprecado (perfil ≥ 1.2.0) | D | HIGH | — | schema | pr, pre-commit | global-data-platform-core/framework/data-contracts/specs/schemas/profile-manifest.yaml profiles 1.2.0 | KB_05, KB_18 |
+| `GOV-PCX-013` | Linaje por capa (upstream/downstream según lineage_rules) | D | HIGH | ideacion:LOW, diseno:MEDIUM | graph | pr, pre-commit | global-data-platform-core/framework/data-contracts/specs/schemas/data-contracts-architecture-standard.yaml lineage_rules | KB_05, KB_06 |
+| `GOV-PCX-014` | Linaje bidireccional consistente (perfil ≥ 1.2.0) | D | HIGH | ideacion:LOW, diseno:MEDIUM | graph | pr, pre-commit | global-data-platform-core/framework/data-contracts/tools/cenco_dc/src/cenco_dc/validation/tier1/cross_contracts.py validate_lineage_cross_contracts | KB_05 |
+| `GOV-PCX-017` | Copia local del estándar (contracts/_schema) en la versión de platform-core | D | HIGH | — | diff | pr, pre-commit | global-data-platform-core/data-products-baseline/scripts/check_data_contracts_architecture_standard.py check_product | KB_05, KB_18 |
+| `GOV-PCX-021` | Validador corporativo cenco_dc (opcional, --cenco-dc) | D | HIGH | — | schema | pr | global-data-platform-core/framework/data-contracts/tools/cenco_dc/README.md validate-contracts / validate-metadata | KB_05 |
+| `GOV-PCX-022` | Descripción del contrato y de sus propiedades (ODCS) | H | MEDIUM | ideacion:LOW, diseno:MEDIUM | schema | pr | 06-data-product-definition.md §11 | KB_05, KB_09 |
+| `GOV-PCX-023` | Compatibilidad declarada en contratos Silver/Gold (ODCS) | D | MEDIUM | ideacion:LOW, diseno:MEDIUM | schema | pr | 06-data-product-definition.md §11 Campos recomendados | KB_05 |
+| `GOV-PCX-024` | Cambio rompiente sin versión MAJOR (ODCS, requiere --base) | D | HIGH | ideacion:OFF, diseno:LOW, desarrollo:MEDIUM, gate:BLOCKER, operacion:BLOCKER, salida:LOW | diff | pr | 15-dataops-cicd.md §20 | KB_05, KB_18 |
 
 ### Metadata y catálogo
 
@@ -160,6 +181,7 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-MET-016` | Descripción útil de contratos | H | MEDIUM | ideacion:LOW, diseno:MEDIUM | regex | pr, catalog | 09-metadata-governance.md §22 | KB_09, KB_05 |
 | `GOV-MET-017` | Consistencia entre metadata técnica y de negocio | S | MEDIUM | — | llm | pr | 09-metadata-governance.md §27 | KB_09 |
 | `GOV-MET-018` | Proceso de mantenimiento de metadata por dominio | O | MEDIUM | — | human | periodic | 09-metadata-governance.md §24 | KB_09 |
+| `GOV-PCX-019` | catalog-export del Data Product presente y con destino correcto | D | LOW | — | exists | pr, pre-commit | global-data-platform-core/framework/data-contracts/tools/cenco_dc/src/cenco_dc/config/paths.py catalog_export_path | KB_09 |
 
 ### Calidad de datos
 
@@ -182,6 +204,7 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-QLT-015` | Umbrales adecuados al uso del producto | S | HIGH | — | llm | pr | 08-data-quality-framework.md §6 | KB_08 |
 | `GOV-QLT-016` | Gestión de incidentes de calidad | O | MEDIUM | — | human | runtime | 08-data-quality-framework.md §22 | KB_08, KB_17 |
 | `GOV-QLT-017` | Controles de calidad para features AI | H | HIGH | ideacion:OFF, diseno:OFF, salida:LOW | schema | pr, gate | 08-data-quality-framework.md §10.5, §19 | KB_08, KB_15 |
+| `GOV-PCX-025` | Reglas de calidad críticas en contratos Silver/Gold (ODCS quality) | D | HIGH | ideacion:OFF, diseno:MEDIUM, desarrollo:HIGH, gate:BLOCKER, operacion:BLOCKER, salida:LOW | schema | pr | 08-data-quality-framework.md §12 | KB_08 |
 
 ### Seguridad y privacidad
 
@@ -205,6 +228,7 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-SEC-016` | Exposición indirecta de PII vía joins o filtros | S | HIGH | — | llm | pr | 10-data-security-framework.md §18 | KB_10, KB_12 |
 | `GOV-SEC-017` | Certificación de uso responsable (self-service) | O | MEDIUM | — | human | runtime | 01-data-principles.md §14 | KB_10 |
 | `GOV-SEC-018` | Revisión periódica de accesos | O | MEDIUM | — | human | periodic | 10-data-security-framework.md §12 | KB_10 |
+| `GOV-PCX-011` | PII declarada en la extensión (pii_classification) | D | HIGH | ideacion:LOW, diseno:MEDIUM, desarrollo:HIGH, gate:HIGH, operacion:HIGH, salida:LOW | regex | pr, pre-commit | global-data-platform-core/framework/data-contracts/specs/schemas/cencosud-odcs-minimal.schema.json $defs.cencosudExtension.pii_classification | KB_10 |
 
 ### IAM
 
@@ -243,6 +267,7 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-OPS-011` | Orquestación versionada en Step Functions | D | MEDIUM | ideacion:OFF, diseno:OFF, desarrollo:LOW, gate:HIGH, operacion:HIGH, salida:OFF | path | pr, gate | lineamientos/estructura-repositorio.md pipelines/ | KB_18 |
 | `GOV-OPS-012` | Configuración de ambiente externalizada | D | MEDIUM | — | regex | pr | 15-dataops-cicd.md §22 | KB_18 |
 | `GOV-OPS-013` | Sin recursos productivos creados manualmente | O | HIGH | — | human | runtime | 15-dataops-cicd.md §21 | KB_18 |
+| `GOV-PCX-018` | CI oficial del Data Product (validate-contracts) | D | MEDIUM | ideacion:OFF, diseno:OFF, salida:LOW | exists | pr, pre-commit | global-data-platform-core/data-products-baseline/.github/workflows/validate-contracts.yaml workflow | KB_18 |
 
 ### Arquitectura y modelado
 
@@ -262,6 +287,8 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-ARC-012` | Límites de dominio respetados | S | HIGH | — | llm | pr | 02.1-business-capability-alignment.md §7 | KB_03, KB_01 |
 | `GOV-ARC-013` | Diseño AI-ready (feature reuse) | S | LOW | — | llm | pr | 01-data-principles.md §10 | KB_15 |
 | `GOV-ARC-014` | Arquitectura de datos documentada | D | MEDIUM | ideacion:OFF, diseno:MEDIUM, desarrollo:HIGH, gate:HIGH, operacion:HIGH, salida:OFF | path | pr, gate | 06-data-product-definition.md §26 DoR | KB_06 |
+| `GOV-PCX-015` | Bloques physical / catalog por capa | D | HIGH | ideacion:LOW, diseno:MEDIUM | schema | pr, pre-commit | global-data-platform-core/framework/data-contracts/docs/x-cencosud-physical-model.md physical / catalog | KB_06, KB_05 |
+| `GOV-PCX-016` | Landing: ingestion_origin coherente con physical y servers | D | MEDIUM | — | schema | pr, pre-commit | global-data-platform-core/framework/data-contracts/docs/bronze-contract-patterns.md landing_origin_profiles | KB_05, KB_10 |
 
 ### Semantic layer y métricas
 
@@ -301,18 +328,18 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 
 | ID | Regla | Nat. | Sev. base | Escalamiento por etapa | Técnica | Control | Fuente | KB |
 |---|---|:-:|---|---|---|---|---|---|
-| `GOV-AIM-001` | Features con ficha completa | D | HIGH | — | schema | pr | 12-ai-ml-data-framework.md §12 | KB_15 |
-| `GOV-AIM-002` | Dataset de entrenamiento especificado y versionado | D | HIGH | — | schema | pr | 12-ai-ml-data-framework.md §14 | KB_15 |
-| `GOV-AIM-003` | Evaluación con partición temporal y control de leakage | D | HIGH | — | schema | pr | 12-ai-ml-data-framework.md §15 | KB_15 |
-| `GOV-AIM-004` | Consistencia entrenamiento ↔ inferencia | D | BLOCKER | ideacion:OFF, diseno:MEDIUM, desarrollo:HIGH | graph | pr, gate | 12-ai-ml-data-framework.md §16 | KB_15 |
-| `GOV-AIM-005` | Features derivadas de Data Products declarados | D | HIGH | — | graph | pr | 12-ai-ml-data-framework.md §10 | KB_15 |
-| `GOV-AIM-006` | Monitores de drift de datos y de modelo | D | HIGH | ideacion:OFF, diseno:OFF, desarrollo:LOW, gate:HIGH, operacion:HIGH, salida:OFF | schema | gate | 12-ai-ml-data-framework.md §23 | KB_15, KB_17 |
-| `GOV-AIM-007` | PII en features con consentimiento y minimización | D | HIGH | — | schema | pr | 12-ai-ml-data-framework.md §22 | KB_15, KB_10 |
-| `GOV-AIM-008` | Corpus RAG gobernado | D | HIGH | — | schema | pr | 12-ai-ml-data-framework.md §18-§19 | KB_16 |
-| `GOV-AIM-009` | Retención de prompts y embeddings | D | MEDIUM | — | schema | pr | 12-ai-ml-data-framework.md §22 | KB_16 |
-| `GOV-AIM-010` | Output del modelo gobernado como Data Product | D | MEDIUM | ideacion:OFF, salida:LOW | schema | pr | 12-ai-ml-data-framework.md §17 | KB_15 |
-| `GOV-AIM-011` | Riesgo de leakage en features | S | HIGH | — | llm | pr | 12-ai-ml-data-framework.md §15, §21 | KB_15 |
-| `GOV-AIM-012` | Problema que requiere primero un mejor Data Product base | S | MEDIUM | — | llm | pr | 12-ai-ml-data-framework.md §28 | KB_15 |
+| `GOV-AIM-001` | Features con ficha completa | D | HIGH | — | schema | pr | 12-ai-ml-dataframework.md §12 | KB_15 |
+| `GOV-AIM-002` | Dataset de entrenamiento especificado y versionado | D | HIGH | — | schema | pr | 12-ai-ml-dataframework.md §14 | KB_15 |
+| `GOV-AIM-003` | Evaluación con partición temporal y control de leakage | D | HIGH | — | schema | pr | 12-ai-ml-dataframework.md §15 | KB_15 |
+| `GOV-AIM-004` | Consistencia entrenamiento ↔ inferencia | D | BLOCKER | ideacion:OFF, diseno:MEDIUM, desarrollo:HIGH | graph | pr, gate | 12-ai-ml-dataframework.md §16 | KB_15 |
+| `GOV-AIM-005` | Features derivadas de Data Products declarados | D | HIGH | — | graph | pr | 12-ai-ml-dataframework.md §10 | KB_15 |
+| `GOV-AIM-006` | Monitores de drift de datos y de modelo | D | HIGH | ideacion:OFF, diseno:OFF, desarrollo:LOW, gate:HIGH, operacion:HIGH, salida:OFF | schema | gate | 12-ai-ml-dataframework.md §23 | KB_15, KB_17 |
+| `GOV-AIM-007` | PII en features con consentimiento y minimización | D | HIGH | — | schema | pr | 12-ai-ml-dataframework.md §22 | KB_15, KB_10 |
+| `GOV-AIM-008` | Corpus RAG gobernado | D | HIGH | — | schema | pr | 12-ai-ml-dataframework.md §18-§19 | KB_16 |
+| `GOV-AIM-009` | Retención de prompts y embeddings | D | MEDIUM | — | schema | pr | 12-ai-ml-dataframework.md §22 | KB_16 |
+| `GOV-AIM-010` | Output del modelo gobernado como Data Product | D | MEDIUM | ideacion:OFF, salida:LOW | schema | pr | 12-ai-ml-dataframework.md §17 | KB_15 |
+| `GOV-AIM-011` | Riesgo de leakage en features | S | HIGH | — | llm | pr | 12-ai-ml-dataframework.md §15, §21 | KB_15 |
+| `GOV-AIM-012` | Problema que requiere primero un mejor Data Product base | S | MEDIUM | — | llm | pr | 12-ai-ml-dataframework.md §28 | KB_15 |
 
 ### Observabilidad
 
@@ -394,7 +421,7 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 | `GOV-DOC-002` | Encabezado de documento (Versión, Estado, Alcance) | D | LOW | — | regex | pr | 01-data-principles.md Encabezado | KB_00 |
 | `GOV-DOC-003` | Numeración de secciones secuencial | D | LOW | — | regex | pr | 06-data-product-definition.md estructura editorial | KB_00 |
 | `GOV-DOC-004` | Regla final presente | D | LOW | — | regex | pr | 01-data-principles.md patrón editorial | KB_00 |
-| `GOV-DOC-005` | Inventario de pendientes documentales | D | INFO | — | regex | periodic | 12-ai-ml-data-framework.md encabezado | KB_00 |
+| `GOV-DOC-005` | Inventario de pendientes documentales | D | INFO | — | regex | periodic | 12-ai-ml-dataframework.md encabezado | KB_00 |
 
 ### Portafolio cross-repo (pack portfolio)
 
@@ -441,4 +468,5 @@ Naturalezas: **D** = Determinista · **H** = Híbrida (presencia determinista + 
 - `GOV-BIZ-008` (H) — ¿El problema está expresado como decisión de negocio y KPI, o como solicitud de una herramienta?
 - `GOV-BIZ-009` (S) — ¿La hipótesis de valor es específica (meta, horizonte, línea base) y medible con los KPIs declarados?
 - `GOV-BIZ-010` (S) — ¿El dominio principal declarado es el que naturalmente corresponde a la capacidad y a las entidades del producto?
+- `GOV-PCX-022` (H) — ¿Las descripciones de propiedades son inequívocas (unidad, moneda, zona horaria, reglas de cálculo) y consistentes con el glosario?
 

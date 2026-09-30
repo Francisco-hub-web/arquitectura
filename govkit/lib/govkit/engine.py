@@ -5,6 +5,7 @@ import datetime as _dt
 import fnmatch
 import hashlib
 import json
+import os
 import time
 import traceback
 import uuid
@@ -161,6 +162,14 @@ class Engine:
         composites: List[Rule] = []
         posts: List[Rule] = []
         for rule in self.selected():
+            stds = rule.raw.get("standards")
+            if stds and self.ctx.standard not in stds:
+                res.outcomes[rule.id] = Outcome("not_applicable", detail=f"no aplica al estándar {self.ctx.standard}")
+                continue
+            opt = rule.raw.get("opt_in")
+            if opt and not (self.ctx.config.get(opt) or os.environ.get(f"GOVKIT_{opt.upper()}") == "1"):
+                res.outcomes[rule.id] = Outcome("skipped", detail=f"opcional: activar con --{opt.replace('_', '-')}")
+                continue
             if rule.nature == "S":
                 res.outcomes[rule.id] = Outcome("semantic")
                 if when_ok(rule.raw.get("when"), self.ctx):
@@ -192,6 +201,8 @@ class Engine:
                 pending.pop(rule.id)
         # Preguntas semánticas de reglas híbridas cuya parte determinista pasó.
         for rule in self.selected():
+            if rule.raw.get("standards") and self.ctx.standard not in rule.raw["standards"]:
+                continue
             if rule.nature == "H" and rule.semantic_question and res.outcomes.get(rule.id, Outcome("")).status == "pass":
                 res.handoff.append({"rule_id": rule.id, "question": rule.semantic_question, "kb": rule.kb,
                                     "title": rule.title})

@@ -10,7 +10,7 @@ from govkit.yamlloc import Doc
 PLUGINS: Dict[str, Callable[..., Iterable[Finding]]] = {}
 _MODULES = ("structure", "business", "naming", "product", "contracts", "metadata", "quality", "security", "iam",
             "sql", "pyjobs", "semantic", "consumption", "observability", "aiml", "lifecycle",
-            "scoring_rules", "dataops", "omd", "docs", "portfolio")
+            "scoring_rules", "dataops", "omd", "docs", "portfolio", "platform_core")
 _loaded = False
 
 

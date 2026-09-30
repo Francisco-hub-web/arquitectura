@@ -1,0 +1,94 @@
+# Hechos verificables sobre las fuentes corporativas (govkit arch hechos). Cada hecho se re-evalúa contra el índice
+# vigente en cada `arch sync`: si deja de cumplirse, las contradicciones que lo usan pasan a REVISAR y se emite una
+# alerta CONFLICTING/UPDATED. Tipos: contains · not_contains · value · exists · placeholder · empty_dir ·
+# archimate_folder · absent_everywhere. Solo patrones y rutas (no se copia contenido).
+version: 1
+facts:
+  - {id: F-PC-01, source: platform-core, path: data-products-baseline/scripts/check_data_contracts_architecture_standard.py,
+     kind: contains, pattern: 'forbidden path \(use bronze/landing or bronze/raw\)',
+     statement: "platform-core rechaza contratos en contracts/input/ (usar bronze/landing o bronze/raw)", status: REQUIRED, label: COD}
+  - {id: F-PC-02, source: platform-core, path: data-products-baseline/scripts/check_data_contracts_architecture_standard.py,
+     kind: contains, pattern: 'govern Silver only via silver/odm/',
+     statement: "platform-core rechaza contratos en silver/stg y silver/wap (Silver solo vía silver/odm/)", status: REQUIRED, label: COD}
+  - {id: F-PC-03, source: platform-core, path: data-products-baseline/scripts/check_data_contracts_architecture_standard.py,
+     kind: contains, pattern: '"metadata" / "data_product\.yaml"',
+     statement: "platform-core exige la ficha en metadata/data_product.yaml", status: REQUIRED, label: COD}
+  - {id: F-PC-04, source: platform-core, path: framework/data-contracts/specs/schemas/profile-manifest.yaml,
+     kind: value, key: current_profile_version, equals: "1.2.0",
+     statement: "perfil xCencosud vigente = 1.2.0", status: REQUIRED, label: COD}
+  - {id: F-PC-05, source: platform-core, path: data-products-baseline/metadata/data_product.yaml,
+     kind: value, key: odcs.profile_manifest_version, equals: "1.1.0",
+     statement: "la plantilla de ficha declara profile_manifest_version 1.1.0", status: IMPLEMENTED, label: COD}
+  - {id: F-PC-06, source: platform-core, path: framework/data-contracts/docs/gold-contract-patterns.md,
+     kind: contains, pattern: 'fct_<process>',
+     statement: "platform-core nombra los hechos Gold fct_<process>.yaml", status: REQUIRED, label: DOC}
+  - {id: F-PC-07, source: platform-core, path: framework/data-contracts/docs/odcs-alignment.md,
+     kind: contains, pattern: '`dataProduct`\s*\|\s*Eliminado en v3\.1\.0',
+     statement: "ODCS v3.1.0 eliminó dataProduct (usar xCencosud.value.data_product_repo)", status: DEPRECATED, label: DOC}
+  - {id: F-PC-08, source: platform-core, path: framework/semantic-layer, kind: empty_dir,
+     statement: "framework/semantic-layer/ de platform-core no tiene plantillas (solo placeholders)", status: UNKNOWN, label: COD}
+  - {id: F-PC-09, source: platform-core, path: framework/data-contracts/specs/schemas/cencosud-odcs-minimal.schema.json,
+     kind: value, key: properties.status.enum, equals: [draft, proposed, active, deprecated, retired],
+     statement: "status del contrato ∈ {draft, proposed, active, deprecated, retired}", status: REQUIRED, label: COD}
+  - {id: F-PC-10, source: platform-core, path: data-products-baseline/metadata/data_product.yaml,
+     kind: contains, pattern: 'lifecycle_status:.*draft \| active \| deprecated',
+     statement: "la ficha del DP usa lifecycle_status draft|active|deprecated", status: IMPLEMENTED, label: COD}
+  - {id: F-PC-11, source: platform-core, path: framework/data-contracts/specs/schemas/cencosud-odcs-minimal.schema.json,
+     kind: value, key: "$defs.cencosudExtension.properties.pii_classification.enum", equals: [none, personal, sensitive],
+     statement: "pii_classification ∈ {none, personal, sensitive}", status: REQUIRED, label: COD}
+  - {id: F-PC-12, source: platform-core, path: data-products-baseline/.github/workflows/validate-contracts.yaml,
+     kind: contains, pattern: 'branches:\s*\[develop,\s*main\]',
+     statement: "el CI oficial del DP se dispara en develop y main", status: IMPLEMENTED, label: COD}
+  - {id: F-PC-13, source: platform-core, path: .github/workflows/check-data-contracts-standard.yaml,
+     kind: contains, pattern: '^\s*if:\s*false', statement: "el CI del estándar a nivel plataforma está deshabilitado",
+     status: IMPLEMENTED, label: COD}
+  - {id: F-PC-14, source: platform-core, path: framework/lakehouse/docs/arts-odm-naming-reference.md,
+     kind: not_contains, pattern: 'Day Calendar DATE', statement: "la referencia ARTS de platform-core no incluye el término Day Calendar (DY)",
+     status: APPROVED, label: DOC}
+  - {id: F-PC-15, source: platform-core, path: data-products-baseline/contracts/_examples/silver/odm/pa_party.example.yaml,
+     kind: contains, pattern: 'name:\s*party_id', statement: "el ejemplo ODM usa nombres de columna snake_case (party_id)",
+     status: IMPLEMENTED, label: COD}
+  - {id: F-PC-16, source: platform-core, path: policies/cloud-naming-conventions.md, kind: placeholder,
+     statement: "policies/cloud-naming-conventions.md está vacío", status: UNKNOWN, label: COD}
+  - {id: F-PC-17, source: platform-core, path: framework/data-contracts/docs/README.md,
+     kind: contains, pattern: 'data-framework-draft/', statement: "la doc de contratos enlaza borradores fuera de los repos",
+     status: UNKNOWN, label: DOC}
+  - {id: F-GOV-01, source: governance, path: "docs/data-framework/details/semantic-layer/Proceso Implementacion Capa Semantica.md",
+     kind: contains, pattern: '\|\s*`dataProduct`\s*\|\s*Obligatorio', statement: "el proceso semántico exige dataProduct",
+     status: REQUIRED, label: DOC}
+  - {id: F-GOV-02, source: governance, path: "docs/data-framework/details/semantic-layer/Proceso Implementacion Capa Semantica.md",
+     kind: contains, pattern: 'framework/semantic-layer/template/', statement: "el proceso semántico ubica las plantillas en platform-core/framework/semantic-layer/template/",
+     status: REQUIRED, label: DOC}
+  - {id: F-GOV-03, source: governance, path: "docs/data-framework/details/semantic-layer/Proceso Implementacion Capa Semantica.md",
+     kind: contains, pattern: '`draft` · `active` · `deprecated` · `retired`', statement: "status semántico ∈ {draft, active, deprecated, retired}",
+     status: REQUIRED, label: DOC}
+  - {id: F-GOV-04, source: governance, path: docs/data-framework/10-data-security-framework.md,
+     kind: contains, pattern: '### Sensible / PII', statement: "GOV 10 clasifica en Público / Interno / Confidencial / Sensible-PII",
+     status: REQUIRED, label: DOC}
+  - {id: F-GOV-05, source: governance, path: skills/ea-data-expert/SKILL.md, kind: contains, pattern: 'L0–L4',
+     statement: "la skill EA usa categorías PII L0–L4 (Ley 21.719)", status: IMPLEMENTED, label: DOC}
+  - {id: F-GOV-06, source: governance, path: skills/ea-data-expert/references/taxonomy.md, kind: contains, pattern: '## 2 - Omnichannel',
+     statement: "taxonomy.md numera '2 - Omnichannel'", status: APPROVED, label: DOC}
+  - {id: F-GOV-07, source: governance, path: skills/ea-data-expert/data/ea-domains_map.json, kind: contains,
+     pattern: '2 - Customer Relations Management', statement: "ea-domains_map.json numera '2 - Customer Relations Management'",
+     status: IMPLEMENTED, label: COD}
+  - {id: F-GOV-08, source: governance, path: docs/data-framework/15-dataops-cicd.md, kind: contains,
+     pattern: 'ramas por ambiente', statement: "15-dataops-cicd desaconseja ramas por ambiente (trunk-based)", status: RECOMMENDED, label: DOC}
+  - {id: F-GOV-09, source: governance, path: docs/data-framework/details/acronyms/arts-odm-naming-reference.md,
+     kind: contains, pattern: 'Day Calendar DATE', statement: "la referencia ARTS de governance incluye el término Day Calendar (DY)", status: RECOMMENDED, label: DOC}
+  - {id: F-GOV-10, source: governance, path: docs/data-framework/details/acronyms/arts-odm-naming-reference.md,
+     kind: contains, pattern: '`ID_[A-Z_]+`', statement: "ARTS ODM define nombres de columna en MAYÚSCULA (ID_…)", status: RECOMMENDED, label: DOC}
+  - {id: F-GOV-11, source: governance, path: docs/data-framework/12-ai-ml-dataframework.md, kind: exists,
+     statement: "el documento 12 se llama 12-ai-ml-dataframework.md", status: APPROVED, label: DOC}
+  - {id: F-GOV-12, source: governance, path: skills/ea-data-expert/references/trade-offs.md, kind: contains,
+     pattern: 'data-architect\.md', statement: "trade-offs.md referencia data-architect.md", status: IMPLEMENTED, label: DOC}
+  - {id: F-GOV-13, source: governance, path: skills/ea-data-expert/data-architect.md, kind: absent,
+     statement: "data-architect.md no existe en la skill", status: UNKNOWN, label: COD}
+  - {id: F-AM-01, source: archimate, kind: archimate_folder, pattern: '-(mdh|sm)-dp-[a-z]{2}$',
+     statement: "ArchiMate (main) modela Data Products con tipo mdh/sm", status: APPROVED, label: DOC}
+  - {id: F-AM-02, source: archimate, kind: archimate_folder, pattern: '^[a-z]+-master-dp-[a-z]{2}$',
+     statement: "ArchiMate (main) modela Data Products sin código de tipo", status: APPROVED, label: DOC}
+  - {id: F-MC-01, source: metadata-catalog, path: policies/09-metadata-governance.md, kind: placeholder,
+     statement: "la política de metadata en el catálogo está vacía", status: UNKNOWN, label: COD}
+  - {id: F-ALL-01, kind: absent_everywhere, pattern: '(^|/)(lineamientos|estructura-repositorio)',
+     statement: "ningún repo corporativo contiene los lineamientos (IAM, Estructura de Repositorio, OMD)", status: UNKNOWN, label: DESC}

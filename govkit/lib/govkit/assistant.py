@@ -30,7 +30,10 @@ READONLY = ["mcp__govkit__lint", "mcp__govkit__gate", "mcp__govkit__score", "mcp
             "Bash(govkit score:*)", "Bash(govkit explain:*)", "Bash(govkit rules:*)", "Bash(govkit kb:*)",
             "Bash(govkit fix)", "Bash(govkit privado --check:*)", "Bash(govkit fuentes:*)", "Bash(govkit notas:*)",
             "mcp__govkit__sources", "mcp__govkit__criteria_search", "mcp__govkit__notes_list", "mcp__govkit__notes_get", "mcp__govkit__notes_save",
-            "mcp__govkit__notes_append"]
+            "mcp__govkit__notes_append", "mcp__govkit__arch_status", "mcp__govkit__arch_context",
+            "mcp__govkit__arch_summary", "mcp__govkit__arch_search", "mcp__govkit__arch_conflicts",
+            "mcp__govkit__arch_adrs", "mcp__govkit__arch_dp", "mcp__govkit__arch_relations", "mcp__govkit__arch_facts",
+            "mcp__govkit__arch_changes", "mcp__govkit__arch_sync", "Bash(govkit arch:*)"]
 DIRECT_EXTRA = ["Read", "Grep", "Glob", "Bash(git status:*)", "Bash(git log:*)", "Bash(git diff:*)",
                 "Bash(git branch:*)", "Bash(ls:*)"]
 GUIDE = """# govkit (gobierno de datos Cencosud) — herramienta LOCAL del usuario
@@ -57,6 +60,21 @@ Cómo trabajar:
    textual). Nunca inventes documentos ni secciones.
 6. Notas: si el usuario pide guardar, retomar o sumar algo, usa `notes_save`, `notes_append`, `notes_list`, `notes_get`
    (se guardan fuera del repo, en ~/.govkit/notas).
+
+MEMORIA ARQUITECTÓNICA (govkit arch: governance, platform-core, ArchiMate, metadata-catalog, indexados en local):
+7. Si la pregunta es de arquitectura, estándares, una ruta, un componente o "qué cambió": llama primero `arch_context`
+   (ruta del repo o `global-…/ruta`) y/o `arch_search`; para cambios `arch_changes` (o `arch_sync` si el usuario pide
+   actualizar: hace fetch de refs remotas, nunca pull); contradicciones `arch_conflicts`; decisiones `arch_adrs`;
+   diseño aprobado del DP `arch_dp`.
+8. Estructura de un análisis: Contexto · Evidencia · Arquitectura esperada · Arquitectura observada · Diferencias ·
+   Impacto · Confianza (ALTA/MEDIA/BAJA) · Recomendación técnica (separada de los hechos).
+9. Etiqueta cada afirmación arquitectónica: [DOCUMENTADO] [EVIDENCIADO EN CÓDIGO] [INFERIDO] [PROPUESTO] [DESCONOCIDO]
+   [CONFLICTIVO], y distingue REQUIRED / APPROVED / RECOMMENDED / IMPLEMENTED / DEPRECATED / UNKNOWN (implementado ≠
+   aprobado). Cita la traza `repo@commit:ruta §sección` que devuelven las herramientas.
+10. Nunca conviertas una inferencia en regla oficial ni completes vacíos inventando: escribe "NO DETERMINADO" y qué
+   evidencia falta. Ante contradicciones, reporta ambas fuentes (CONFLICT DETECTED) sin decidir cuál gana.
+11. Nunca hagas `git pull`, checkout, reset ni stash en los repos corporativos; nunca restaures `.github/setup.js`. Si ves
+   un secreto: "SECRET DETECTED" con archivo, ruta y tipo, jamás el valor.
 
 PRIVACIDAD (obligatorio): govkit es una herramienta local y privada del usuario.
 - Nunca escribas "govkit" ni referencias a él en archivos del repo, comentarios, mensajes de commit, nombres de rama,
@@ -89,15 +107,25 @@ def _context(cwd: Path) -> str:
         from govkit.repo import RepoContext
 
         ctx = RepoContext(cwd, load_catalog())
-        has_dp = ctx.dp is not None
-        lines.append(f"- Repo: {ctx.repo_name} · ficha del Data Product: {'sí' if has_dp else 'NO (metadata/catalog/data_product.yaml)'}"
-                     f" · estado evaluado: {ctx.stage}")
+        ficha = ctx.dp_file
+        lines.append(f"- Repo: {ctx.repo_name} · estándar: {ctx.standard} ({ctx.standard_reason}) · ficha: "
+                     f"{ficha or 'NO (' + ctx.expected_dp_file + ')'} · estado evaluado: {ctx.stage}")
         if is_git(cwd):
             hook = git_path(cwd, "hooks/pre-push")
             guarded = bool(hook and hook.exists() and "govkit-hook" in hook.read_text(errors="ignore"))
             lines.append(f"- Modo privado: {'activo (guardias locales instaladas)' if guarded else 'NO activo → sugiere `govkit privado`'}")
     except Exception as exc:  # noqa: BLE001 - el contexto es opcional
         lines.append(f"- (sin contexto de repo: {type(exc).__name__})")
+    try:
+        from govkit.arch import load_state
+        st = load_state()["sources"]
+        if st:
+            lines.append("- Memoria arquitectónica: " + "; ".join(
+                f"{k}@{str(v.get('commit') or '?')[:7]} ({v.get('origin')})" for k, v in sorted(st.items())))
+        else:
+            lines.append("- Memoria arquitectónica: sin ingerir (sugiere `govkit arch sync` o `govkit arch ingest --snapshot`)")
+    except Exception:  # noqa: BLE001
+        pass
     return "\n".join(lines) + "\n"
 
 

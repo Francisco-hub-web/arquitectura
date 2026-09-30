@@ -64,3 +64,55 @@ def scaffold(domain: str, subdomain: str, type_code: str, country: str, dest: st
         if not any(p.iterdir()):
             (p / ".gitkeep").write_text("", encoding="utf-8")
     return root
+
+
+PC_README = """# {repo}
+
+> Data Product (estándar platform-core). Completa las marcas <COMPLETAR> antes de promover.
+
+## Propósito / descripción
+<COMPLETAR: qué decisión o proceso habilita y para quién>
+
+## Owners / ownership
+- Data Owner / Steward: <COMPLETAR>
+- Technical Owner: <COMPLETAR @org/team>
+
+## Inputs / outputs
+- Inputs (bronze/landing): <COMPLETAR fuentes y contratos>
+- Outputs (silver/odm, gold/dim|fact, semantic): <COMPLETAR>
+
+## SLA
+<COMPLETAR frescura / disponibilidad>
+
+## Branches / flujo de trabajo
+<COMPLETAR según el estándar vigente>
+
+## Runbook / operación
+Ver docs/engineering/runbook.md
+"""
+
+
+def scaffold_platform_core(domain: str, subdomain: str, type_code: Optional[str], country: str, dest: str = ".",
+                           force: bool = False) -> Path:
+    """Repo de Data Product con la estructura del baseline platform-core (carpetas + ficha + README/CHANGELOG).
+    No genera workflows ni CODEOWNERS (afectan el GitHub corporativo): se copian desde el baseline oficial."""
+    from govkit.plugins.platform_core import _baseline_dirs, ficha_template
+    parts = [domain.replace("_", "-"), subdomain.replace("_", "-")] + ([type_code] if type_code and type_code != "none" else [])
+    repo = "-".join(parts) + f"-dp-{country}"
+    root = Path(dest).resolve() / repo
+    if root.exists() and any(root.iterdir()) and not force:
+        raise SystemExit(f"govkit: {root} ya existe y no está vacío (usar --force)")
+    for d in _baseline_dirs():
+        (root / d).mkdir(parents=True, exist_ok=True)
+        keep = root / d / ".gitkeep"
+        if not any((root / d).iterdir()):
+            keep.write_text("", encoding="utf-8")
+    (root / "metadata").mkdir(parents=True, exist_ok=True)
+    (root / "metadata" / "data_product.yaml").write_text(ficha_template(repo, domain, country), encoding="utf-8")
+    (root / "README.md").write_text(PC_README.format(repo=repo), encoding="utf-8")
+    (root / "CHANGELOG.md").write_text(f"# Changelog\n\n## [0.1.0] - {_dt.date.today().isoformat()}\n- Estructura inicial.\n",
+                                       encoding="utf-8")
+    (root / "docs" / "engineering").mkdir(parents=True, exist_ok=True)
+    (root / "docs" / "engineering" / "runbook.md").write_text("# Runbook\n\n<COMPLETAR: operación, alertas y "
+                                                              "recuperación>\n", encoding="utf-8")
+    return root

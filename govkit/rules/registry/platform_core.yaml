@@ -1,0 +1,92 @@
+# Estándar platform-core destilado (FALLBACK). govkit lee el estándar REAL cuando está disponible, en este orden:
+#   1. copia del Data Product: contracts/_schema/{data-contracts-architecture-standard.yaml, profile-manifest.yaml,
+#      cencosud-odcs-minimal.schema.json}
+#   2. clon local de global-data-platform-core (govkit arch config platform-core <ruta>)
+#   3. índice de govkit arch (snapshot o sync)
+#   4. estos valores (verificados contra global-data-platform-core@c07803a, perfil xCencosud 1.2.0)
+# Si el estándar real difiere de este fallback, `govkit arch sync` lo alerta (hechos F-PC-*).
+version: 1
+source: {repo: global-data-platform-core, commit: c07803a, path: framework/data-contracts/specs/schemas/}
+profile_version: "1.2.0"
+approved_api_versions: ["v3.1.0"]
+forbidden_root_keys: [x-cencosud, dataQuality, sla]
+forbidden_extension_blocks: {profile_from: "1.2.0", blocks: [processing]}
+required_extension_property: xCencosud
+status_enum: [draft, proposed, active, deprecated, retired]
+pii_enum: [none, personal, sensitive]
+asset_type_enum: [dataset, table, view, metric, policy]
+ingestion_origins: [object_store_s3, api_rest, sftp, stream_kafka, saas_export]
+root_required: [apiVersion, kind, id, version, status, domain]
+extension_required: [data_product_repo, layer, asset_type, medallion_object]
+lineage_rules:
+  profile_from: "1.2.0"
+  bidirectional_consistency: true
+  bronze_landing: {upstream_contract_ref: forbidden, downstream_path_prefix: contracts/bronze/raw/}
+  bronze_raw: {upstream_contract_ref: required, upstream_path_prefix: contracts/bronze/landing/, downstream_path_prefix: contracts/silver/odm/}
+  silver_odm: {upstream_contract_ref: required, upstream_path_prefix: contracts/bronze/raw/, downstream_path_prefix: contracts/gold/}
+  gold_dim: {upstream_contract_ref: required, upstream_path_prefix: contracts/silver/odm/}
+  gold_fact: {upstream_contract_ref: required, upstream_path_prefixes: [contracts/silver/odm/, contracts/gold/dim/]}
+landing_origin_profiles:
+  api_rest: {physical_kind: api, server_type: api}
+  sftp: {physical_kind: object_store, server_type: sftp}
+  object_store_s3: {physical_kind: object_store, server_type: s3}
+  stream_kafka: {physical_kind: stream, server_type: kafka}
+  saas_export: {physical_kind: saas_export, server_type: saas}
+layers:   # carpeta → (layer, medallion_zone) + bloques exigidos (scaffold_templates)
+  bronze/landing: {layer: bronze, zone: landing, required_blocks: [physical], physical_required_keys: [kind, format]}
+  bronze/raw: {layer: bronze, zone: raw, required_blocks: [physical]}
+  silver/odm: {layer: silver, zone: odm, required_blocks: [catalog], catalog_required_keys: [glue_database, iceberg_table, table_type]}
+  gold/dim: {layer: gold, zone: dim, required_blocks: [catalog], catalog_required_keys: [glue_database, iceberg_table, table_type]}
+  gold/fact: {layer: gold, zone: fact, required_blocks: [catalog], catalog_required_keys: [glue_database, iceberg_table, table_type]}
+gold_prefix: {dim: dim_, fact: fct_}
+# Ficha del Data Product (data-products-baseline/metadata/data_product.yaml, G-CORP-01)
+ficha:
+  path: metadata/data_product.yaml
+  required: [data_product_id, display_name, domain, udn, stage, architecture_pattern, lifecycle_status, owner_data,
+             owner_tech, classification]
+  enums:
+    udn: [cl, pe, ar, br]
+    stage: ["1", "2"]
+    architecture_pattern: [medallion, ingest-only, publish-only]
+    lifecycle_status: [draft, active, deprecated]
+  lifecycle_map: {draft: en_desarrollo, active: productivo, deprecated: en_retiro}   # → estados govkit (severidad)
+  catalog_export_target: "specs/data-products/{udn}/{data_product_id}.yaml"
+baseline_dirs: [contracts/bronze/landing, contracts/bronze/raw, contracts/silver/odm, contracts/gold/dim, contracts/gold/fact,
+                contracts/semantic, contracts/policies, docs/adr, docs/architecture, docs/engineering, metadata/catalog-export,
+                modeling/dbt/models/silver, modeling/dbt/models/gold, pipelines/orchestration, tests/contract,
+                tests/data_quality, tests/integration, tests/smoke, tests/unit]
+dp_workflows: [.github/workflows/validate-contracts.yaml]
+# Plantilla mínima de la ficha para `govkit fix` / `govkit init --estandar platform-core` (placeholders <COMPLETAR>).
+ficha_template: |
+  # Registro metadata — Data Product (estándar platform-core, G-CORP-01)
+  data_product_id: {repo}
+  display_name: <COMPLETAR nombre visible>
+  domain: {domain}
+  udn: {country}  # cl | pe | ar | br
+  stage: "1"  # 1=exploración | 2=productización
+  architecture_pattern: medallion  # medallion | ingest-only | publish-only
+  lifecycle_status: draft  # draft | active | deprecated
+
+  owner_data: <COMPLETAR Data Steward>
+  owner_tech: "<COMPLETAR @github-org/team>"
+  classification: <COMPLETAR clasificación>
+  pia_required: false
+
+  sla_freshness_gold_hours: 48
+  consumers: []
+  upstream_dependencies: []
+  execution_artifacts_repo: <COMPLETAR repo dataops>
+
+  catalog_export:
+    target_path: specs/data-products/{country}/{repo}.yaml
+
+  odcs:
+    api_version_default: v3.1.0
+    profile_version: "{profile_version}"
+    profile_schema: cencosud-odcs-minimal.schema.json
+    profile_manifest_version: "{profile_version}"
+
+  data_contracts: []
+  outputs: []
+  retention_days_default: 365
+  pep_cost_center: null

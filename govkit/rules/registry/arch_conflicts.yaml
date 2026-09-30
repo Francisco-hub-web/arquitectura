@@ -1,0 +1,233 @@
+# Contradicciones registradas (CONFLICT DETECTED, SUPER PROMPT §14). govkit NO decide cuál fuente es correcta:
+# registra ambas, la evidencia y qué confirmar. `facts`: hechos (arch_facts.yaml) que sostienen el conflicto; si
+# alguno deja de cumplirse, el conflicto pasa a REVISAR. Espejo humano: docs/02-hallazgos-auditoria-documental.md.
+version: 1
+conflicts:
+  - id: C-01
+    hallazgo: H-18
+    title: "Carpetas de contratos: contracts/input|output (lineamiento) vs medallion (platform-core)"
+    source_a: "govkit GOV-CTR-001/002/011, GOV-STR-002 ← lineamientos/estructura-repositorio.md (contracts/input, contracts/output)"
+    source_b: "platform-core check_data_contracts_architecture_standard.py + folder-conventions.md (contracts/input prohibido)"
+    conflict: "El lineamiento exige contracts/input/ que el estándar ejecutable de platform-core prohíbe (también silver/stg|wap)."
+    evidence: ["platform-core:data-products-baseline/scripts/check_data_contracts_architecture_standard.py (check_product)",
+               "govkit:rules/catalog.yaml artifacts contracts_input/contracts_output"]
+    explanation: "[INF] El lineamiento es anterior a los perfiles xCencosud 1.1/1.2 (2026-06-10)."
+    confirm: "¿El lineamiento 'Estructura de Repositorio' fue reemplazado por platform-core o hay una versión nueva?"
+    facts: [F-PC-01, F-PC-02]
+    rules: [GOV-CTR-001, GOV-CTR-002, GOV-CTR-011, GOV-STR-002]
+    dp_globs: ["contracts/input/**", "contracts/output/**", "contracts/bronze/**", "contracts/silver/**"]
+    potential_adr: PA-02
+    mitigation: "govkit ≥ 2.0: estándar `auto` → en repos platform-core aplican GOV-PCX-* y no las reglas del lineamiento."
+  - id: C-02
+    hallazgo: H-19
+    title: "Ficha del Data Product: metadata/catalog/ (govkit/ADR-006) vs metadata/data_product.yaml (platform-core)"
+    source_a: "govkit GOV-DPD-001, GOV-MET-* y ADR-006 decisión 2 (metadata/catalog/data_product.yaml, esquema spec.*)"
+    source_b: "platform-core data-products-baseline/metadata/data_product.yaml (esquema plano) exigida por check_product"
+    conflict: "Dos rutas y dos esquemas para la misma ficha."
+    evidence: ["platform-core:data-products-baseline/metadata/data_product.yaml", "govkit:rules/catalog.yaml GOV-DPD-001"]
+    explanation: "[INF] govkit se basó en el lineamiento y en GOV 06/09; platform-core es posterior."
+    confirm: "¿La ficha platform-core es canónica? ¿Cómo se mapean los bloques de 06 que no tiene (spec.role, SLOs, consumo…)?"
+    facts: [F-PC-03]
+    rules: [GOV-DPD-001, GOV-MET-001, GOV-MET-007, GOV-MET-011, GOV-MET-012]
+    dp_globs: ["metadata/**"]
+    potential_adr: PA-05
+    mitigation: "govkit ≥ 2.0: con estándar platform-core la ficha es metadata/data_product.yaml (GOV-PCX-001..005)."
+  - id: C-03
+    hallazgo: H-20
+    title: "Versión del manifest de perfil desactualizada en la plantilla de ficha (interno platform-core)"
+    source_a: "platform-core profile-manifest.yaml (current_profile_version 1.2.0)"
+    source_b: "platform-core data-products-baseline/metadata/data_product.yaml (odcs.profile_manifest_version 1.1.0)"
+    conflict: "La plantilla de ficha declara un manifest anterior al perfil vigente; check_product no lo valida."
+    evidence: ["platform-core:framework/data-contracts/specs/schemas/profile-manifest.yaml",
+               "platform-core:data-products-baseline/metadata/data_product.yaml"]
+    explanation: "[INF] Plantilla no actualizada al publicar la 1.2.0."
+    confirm: "Corrección upstream en platform-core."
+    facts: [F-PC-04, F-PC-05]
+    rules: [GOV-PCX-005]
+    dp_globs: ["metadata/data_product.yaml"]
+  - id: C-04
+    hallazgo: H-21
+    title: "Nombre de repos de Data Product: {type} ∈ {txd, anl} vs mdh/sm/sin tipo (ArchiMate aprobado)"
+    source_a: "govkit GOV-NAM-001 ← lineamiento (type ∈ {txd, anl})"
+    source_b: "global-data-archimate-models main: *-master-{txd|mdh|sm}-dp-cl y customer-master-dp-cl"
+    conflict: "mdh y sm no existen en el lineamiento; hay Data Products sin código de tipo."
+    evidence: ["archimate:model/diagrams (carpetas Data Products/Chile/*)", "govkit:rules/catalog.yaml GOV-NAM-001"]
+    explanation: "NO DETERMINADO: significado de mdh y sm desconocido."
+    confirm: "Tabla oficial de códigos de tipo y si el tipo es opcional (actualiza H-04)."
+    facts: [F-AM-01, F-AM-02]
+    rules: [GOV-NAM-001]
+    dp_globs: []
+    potential_adr: PA-04
+  - id: C-05
+    hallazgo: H-22
+    title: "Contrato semántico: proceso GOV (dataProduct obligatorio, .odcs.yaml) vs ODCS v3.1.0 de platform-core"
+    source_a: "governance Proceso Implementacion Capa Semantica.md (dataProduct obligatorio; status de 4 valores; {nombre}.odcs.yaml)"
+    source_b: "platform-core odcs-alignment.md (dataProduct eliminado en v3.1.0) + schema (status de 5 valores)"
+    conflict: "Dos especificaciones incompatibles del mismo artefacto."
+    evidence: ["governance:docs/data-framework/details/semantic-layer/Proceso Implementacion Capa Semantica.md",
+               "platform-core:framework/data-contracts/docs/odcs-alignment.md"]
+    explanation: "[INF] El proceso semántico se escribió sobre una versión anterior de ODCS."
+    confirm: "¿Qué especificación rige los contratos semánticos?"
+    facts: [F-GOV-01, F-PC-07]
+    rules: []
+    dp_globs: ["contracts/semantic/**"]
+    potential_adr: PA-08
+  - id: C-06
+    hallazgo: H-23
+    title: "Vocabularios de ciclo de vida (contrato, producto, catálogo)"
+    source_a: "governance 18 §9 (12 estados) · proceso semántico (4)"
+    source_b: "platform-core schema de contrato (5) · ficha lifecycle_status (3)"
+    conflict: "Cuatro vocabularios sin mapeo oficial."
+    evidence: ["platform-core:framework/data-contracts/specs/schemas/cencosud-odcs-minimal.schema.json",
+               "platform-core:data-products-baseline/metadata/data_product.yaml"]
+    explanation: "[INF] Mezcla de niveles (contrato vs producto vs catálogo)."
+    confirm: "Mapeo oficial contrato ↔ producto ↔ catálogo (amplía H-06)."
+    facts: [F-PC-09, F-PC-10, F-GOV-03]
+    rules: [GOV-LCY-001]
+    dp_globs: ["metadata/data_product.yaml", "contracts/**"]
+    potential_adr: PA-07
+  - id: C-07
+    hallazgo: H-24
+    title: "Vocabularios de clasificación (GOV 10 · L0–L4 · none/personal/sensitive)"
+    source_a: "governance 10-data-security-framework.md (Público/Interno/Confidencial/Sensible-PII)"
+    source_b: "skill ea-data-expert (L0–L4, Ley 21.719) · platform-core pii_classification {none, personal, sensitive}"
+    conflict: "Tres escalas sin tabla de equivalencias."
+    evidence: ["governance:docs/data-framework/10-data-security-framework.md", "governance:skills/ea-data-expert/SKILL.md",
+               "platform-core:framework/data-contracts/specs/schemas/cencosud-odcs-minimal.schema.json"]
+    explanation: "NO DETERMINADO."
+    confirm: "Tabla oficial de equivalencias y cuál es obligatoria en contrato y ficha."
+    facts: [F-GOV-04, F-GOV-05, F-PC-11]
+    rules: [GOV-SEC-001, GOV-PCX-011]
+    dp_globs: ["metadata/data_product.yaml", "contracts/**"]
+    potential_adr: PA-06
+  - id: C-08
+    hallazgo: H-25
+    title: "Nomenclatura de columnas en Silver ODM: ARTS en MAYÚSCULA vs snake_case (ejemplo PC, GOV-NAM-014)"
+    source_a: "referencia ARTS ODM (ID_EML_ADS, CD_MTH_CNCT, FL_ACTV…)"
+    source_b: "platform-core _examples/silver/odm/pa_party.example.yaml (party_id) · govkit GOV-NAM-014"
+    conflict: "No está claro si ARTS aplica a nombres lógicos, físicos o solo a Silver ODM."
+    evidence: ["platform-core:framework/lakehouse/docs/arts-odm-naming-reference.md",
+               "platform-core:data-products-baseline/contracts/_examples/silver/odm/pa_party.example.yaml"]
+    explanation: "NO DETERMINADO."
+    confirm: "Alcance de la convención ARTS por capa y tipo de nombre."
+    facts: [F-GOV-10, F-PC-15]
+    rules: [GOV-NAM-014, GOV-PCX-012]
+    dp_globs: ["contracts/silver/**", "modeling/dbt/models/silver/**"]
+    potential_adr: PA-09
+  - id: C-09
+    hallazgo: H-26
+    title: "Taxonomía EA: taxonomy.md vs ea-domains_map.json"
+    source_a: "governance skills/ea-data-expert/references/taxonomy.md"
+    source_b: "governance skills/ea-data-expert/data/ea-domains_map.json (el que usa query_domains.py)"
+    conflict: "Numeración y nombres de dominios distintos."
+    evidence: ["governance:skills/ea-data-expert/references/taxonomy.md", "governance:skills/ea-data-expert/data/ea-domains_map.json"]
+    explanation: "[INF] Probablemente canónico el JSON (lo ejecuta el script)."
+    confirm: "Taxonomía canónica."
+    facts: [F-GOV-06, F-GOV-07]
+    rules: [GOV-BIZ-001]
+    dp_globs: []
+    potential_adr: PA-12
+  - id: C-10
+    hallazgo: H-27
+    title: "Estrategia de ramas: trunk-based (GOV 15) vs develop+main en el CI oficial del DP"
+    source_a: "governance 15-dataops-cicd.md §15 (sin ramas por ambiente)"
+    source_b: "platform-core data-products-baseline/.github/workflows/*.yaml (branches: [develop, main])"
+    conflict: "El scaffold oficial del DP asume develop (amplía H-01)."
+    evidence: ["platform-core:data-products-baseline/.github/workflows/validate-contracts.yaml",
+               "governance:docs/data-framework/15-dataops-cicd.md"]
+    explanation: "[INF] Los repos de conocimiento (AM, MC, GOV) tienen flujos propios legítimos; el conflicto aplica a repos DP."
+    confirm: "¿develop sigue vigente en los repos de Data Product?"
+    facts: [F-PC-12, F-GOV-08]
+    rules: [GOV-NAM-007, GOV-OPS-008]
+    dp_globs: [".github/workflows/**"]
+  - id: C-11
+    hallazgo: H-28
+    title: "Referencias documentales rotas (numeración antigua, documentos inexistentes, borradores)"
+    source_a: "documentos que citan: GOV 02..19 (03, 04, 05, 07, 14-dataops, 15-scoring, 16, 17, 12-ai-ml-data-framework), PC docs (data-framework-draft), skill EA (data-architect.md)"
+    source_b: "árbol real de archivos de los repos"
+    conflict: "Los destinos no existen o cambiaron de nombre (govkit arch relaciones --rotas lista cada uno)."
+    evidence: ["govkit arch relaciones --rotas"]
+    explanation: "[INF] Renumeración tras insertar 14-consumption (H-03) y documentos aún no publicados."
+    confirm: "¿Los destinos existen en otro lugar (Confluence)? Renumerar en un PR único."
+    facts: [F-GOV-11, F-GOV-12, F-GOV-13, F-PC-17]
+    rules: [GOV-DOC-001]
+    dp_globs: []
+  - id: C-12
+    hallazgo: H-29
+    title: "Estándar de contratos sin enforcement a nivel plataforma"
+    source_a: "platform-core data-contracts-architecture-standard.yaml (reglas y validadores)"
+    source_b: "platform-core .github/workflows/check-data-contracts-standard.yaml (if: false)"
+    conflict: "Plataforma: IMPLEMENTED (deshabilitado). DP: REQUIRED solo si copió validate-contracts.yaml."
+    evidence: ["platform-core:.github/workflows/check-data-contracts-standard.yaml"]
+    explanation: "DOCUMENTADO en el propio workflow ('DISABLED temporalmente')."
+    confirm: "¿Fecha de reactivación?"
+    facts: [F-PC-13]
+    rules: []
+    dp_globs: [".github/workflows/**"]
+  - id: C-13
+    hallazgo: H-30
+    title: "Prefijo de hechos Gold: fact_ (lineamiento/govkit) vs fct_ (platform-core)"
+    source_a: "govkit GOV-NAM-006 y naming de modelos dbt (fact_*) ← lineamiento"
+    source_b: "platform-core gold-contract-patterns.md (fct_<process>.yaml, gold_fct_<process>)"
+    conflict: "govkit marcaría error el patrón oficial de platform-core."
+    evidence: ["platform-core:framework/data-contracts/docs/gold-contract-patterns.md", "govkit:rules/catalog.yaml GOV-NAM-006"]
+    explanation: "[INF] Lineamiento anterior al estándar de contratos."
+    confirm: "¿El lineamiento fact_ fue reemplazado?"
+    facts: [F-PC-06]
+    rules: [GOV-NAM-006]
+    dp_globs: ["contracts/gold/**", "modeling/dbt/models/gold/**"]
+    mitigation: "govkit ≥ 2.0: con estándar platform-core aplica GOV-PCX-009 (dim_/fct_)."
+  - id: C-14
+    hallazgo: H-31
+    title: "Lineamientos (IAM, Estructura de Repositorio, OMD) fuera de los repos corporativos"
+    source_a: "govkit: 57 reglas citan lineamientos/*"
+    source_b: "los 4 repos no los contienen; policies/cloud-naming-conventions.md vacío"
+    conflict: "No se puede verificar la vigencia de ~1/4 de las reglas."
+    evidence: ["govkit arch trazabilidad"]
+    explanation: "[INF] Probablemente viven en Confluence."
+    confirm: "Ubicación oficial y versión de los lineamientos."
+    facts: [F-ALL-01, F-PC-16]
+    rules: []
+    dp_globs: []
+  - id: C-15
+    hallazgo: H-32
+    title: "Referencia ARTS ODM divergente entre governance y platform-core"
+    source_a: "governance docs/data-framework/details/acronyms/arts-odm-naming-reference.md (merge 2026-09-29)"
+    source_b: "platform-core framework/lakehouse/docs/arts-odm-naming-reference.md (generada desde .xlsx, 2026-09-01)"
+    conflict: "governance incluye el término Day Calendar (DY, p.ej. DC_DY_BSN) que platform-core no tiene; el resto solo difiere en escapes."
+    evidence: ["govkit arch relaciones (duplicate_divergent)"]
+    explanation: "[INF] Término agregado en governance aún no reflejado en el Excel/MD de platform-core (o viceversa)."
+    confirm: "Fuente canónica (Excel PC o doc GOV) y si DY está aprobado."
+    facts: [F-GOV-09, F-PC-14]
+    rules: []
+    dp_globs: ["contracts/silver/**"]
+    potential_adr: PA-09
+
+potential_adrs:
+  - {id: PA-01, decision: "Estándar de contratos = ODCS v3.1.0 + perfil xCencosud 1.2.0",
+     evidence: "platform-core profile-manifest.yaml + data-contracts-architecture-standard.yaml",
+     why: "Decisión transversal y versionada (supersedes) que afecta a todos los DP y a govkit.", label: COD,
+     paths: ["platform-core:framework/data-contracts/specs/schemas/**"]}
+  - {id: PA-02, decision: "Eliminar contracts/input; Bronze vía bronze/landing|raw; Silver solo vía silver/odm",
+     evidence: "check_data_contracts_architecture_standard.py (check_product)", why: "Cambia la estructura de todos los DP y contradice el lineamiento (C-01).", label: COD,
+     paths: ["platform-core:data-products-baseline/scripts/**"]}
+  - {id: PA-03, decision: "Deprecar el bloque processing (jobs a DataOps)", evidence: "profile-manifest 1.2.0 · forbidden_extension_blocks_from_profile",
+     why: "Deprecación que requiere ruta de migración.", label: DOC, paths: ["platform-core:framework/data-contracts/specs/schemas/**"]}
+  - {id: PA-04, decision: "Convención de nombre de DP con mdh/sm (y sin tipo)", evidence: "ArchiMate main (C-04)",
+     why: "Naming corporativo sin norma escrita.", label: INF, paths: ["archimate:model/diagrams/**"]}
+  - {id: PA-05, decision: "Ficha del DP canónica y catalog-export → metadata-catalog", evidence: "platform-core baseline metadata/ + cenco_dc export",
+     why: "Define el contrato entre los DP y el catálogo corporativo.", label: DOC, paths: ["platform-core:data-products-baseline/metadata/**"]}
+  - {id: PA-06, decision: "Vocabulario único de clasificación", evidence: "C-07", why: "Impacta seguridad, Ley 21.719 e IAM.", label: CONF,
+     paths: ["governance:docs/data-framework/10-data-security-framework.md"]}
+  - {id: PA-07, decision: "Vocabulario de ciclo de vida por nivel (contrato, producto, catálogo)", evidence: "C-06",
+     why: "Cuatro enumeraciones en conflicto.", label: CONF, paths: ["governance:docs/data-framework/18-data-product-lifecycle.md"]}
+  - {id: PA-08, decision: "Especificación del contrato semántico (.odcs.yaml/.osi.yaml vs ODCS 3.1.0)", evidence: "C-05",
+     why: "Dos especificaciones incompatibles.", label: CONF, paths: ["governance:docs/data-framework/details/semantic-layer/**"]}
+  - {id: PA-09, decision: "Fuente canónica de ARTS ODM y su alcance por capa", evidence: "R4, C-08, C-15",
+     why: "Duplicación divergente y convención de columnas ambigua.", label: CONF, paths: ["platform-core:framework/lakehouse/**"]}
+  - {id: PA-10, decision: "Patrón Write-Audit-Publish con quarantine en Silver ODM (dbt)", evidence: "ArchiMate LLD 'Silver - WAP ODM' · PC lakehouse 'ARTS/ODM · WAP'",
+     why: "Patrón de plataforma solo modelado, sin norma escrita.", label: INF, paths: ["archimate:model/**"]}
+  - {id: PA-11, decision: "Linaje con OpenLineage (AM) vs OpenMetadata (govkit KB_21/OMD)", evidence: "elementos OpenLineage en ArchiMate",
+     why: "Elección tecnológica transversal sin decisión visible.", label: DESC, paths: ["archimate:model/**"]}
+  - {id: PA-12, decision: "Taxonomía EA canónica", evidence: "C-09", why: "Base del mapa de capacidades.", label: CONF,
+     paths: ["governance:skills/ea-data-expert/**"]}

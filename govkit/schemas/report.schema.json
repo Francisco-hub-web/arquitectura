@@ -107,6 +107,16 @@
             "string",
             "null"
           ]
+        },
+        "standard": {
+          "type": "string",
+          "enum": [
+            "platform-core",
+            "lineamientos"
+          ]
+        },
+        "standard_reason": {
+          "type": "string"
         }
       },
       "required": [

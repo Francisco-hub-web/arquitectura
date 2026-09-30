@@ -5,7 +5,7 @@ from tests.helpers import CATALOG
 from govkit.plugins import PLUGINS, load_all
 
 ALLOWED_DOCS = ("01-", "02-", "02.1-", "02.2-", "06-", "08-", "09-", "10-", "11-", "12-", "13-", "14-", "15-", "18-", "19-",
-                "lineamientos/")
+                "lineamientos/", "global-data-platform-core/", "global-data-archimate-models/")
 
 
 class TestCatalogIntegrity(unittest.TestCase):

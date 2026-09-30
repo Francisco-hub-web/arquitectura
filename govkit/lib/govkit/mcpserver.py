@@ -38,6 +38,12 @@ Flujo recomendado sobre un repo de Data Product:
 7. Preguntas libres sobre si un criterio existe (p.ej. algo oído en una reunión): `criteria_search` y veredicto
    EXISTE / EXISTE CON MATICES / NO EXISTE / CONTRADICE; no corras `lint` si la pregunta no es sobre el repo.
    Si el usuario quiere guardar o retomar algo: `notes_save` / `notes_append` / `notes_list` / `notes_get`.
+8. Arquitectura (repos corporativos indexados en local): `arch_context` = "qué debo mirar si analizo esta ruta";
+   `arch_search`, `arch_summary`, `arch_conflicts`, `arch_adrs`, `arch_dp`, `arch_relations`, `arch_changes`/`arch_sync`.
+   Etiqueta cada afirmación (DOCUMENTADO · EVIDENCIADO EN CÓDIGO · INFERIDO · PROPUESTO · DESCONOCIDO · CONFLICTIVO),
+   distingue REQUIRED/APPROVED/RECOMMENDED/IMPLEMENTED/DEPRECATED/UNKNOWN, cita la traza repo@commit:ruta §sección y
+   usa "NO DETERMINADO" cuando falte evidencia. Nunca git pull/checkout/reset en esos repos; secretos: solo
+   "SECRET DETECTED" con archivo, ruta y tipo.
 PRIVACIDAD: govkit es una herramienta local del usuario. Nunca escribas "govkit" ni referencias a él en archivos del
 repo, commits, ramas, PRs ni issues; no crees `.govkit.yaml` ni reportes dentro del repo (config personal en
 `.git/govkit/config.yaml`, reportes fuera del repo). No hagas commit ni push salvo pedido explícito."""
@@ -284,6 +290,121 @@ def t_notes_append(id: int, titulo: str, contenido: str):
     return {"id": n["id"], "note": f"Agregado a la nota #{n['id']}."}
 
 
+# ============================================================== memoria arquitectónica (govkit arch)
+def _slim_report(r: Dict[str, Any]) -> Dict[str, Any]:
+    r = dict(r)
+    r.pop("previous", None)
+    r.pop("current", None)
+    for a in r.get("alerts") or []:
+        a.pop("items", None)
+    if len(r.get("changes") or []) > 60:
+        r["changes"] = r["changes"][:60] + [{"path": f"… {len(r['changes']) - 60} más"}]
+    return r
+
+
+def t_arch_status():
+    from govkit.arch import cli as acli
+    buf = io.StringIO()
+    old, sys.stdout = sys.stdout, buf
+    try:
+        acli.main(["estado", "--json"])
+    finally:
+        sys.stdout = old
+    return json.loads(buf.getvalue())
+
+
+def t_arch_context(ruta: str):
+    from govkit.arch import context
+    ctx = context.context(ruta)
+    return {"markdown": context.render(ctx), "data": json.loads(json.dumps(ctx, default=str)),
+            "note": "Usa esto como 'Architecture Context Map': revisa las rutas listadas antes de concluir. Cita las trazas."}
+
+
+def t_arch_summary(ruta: str):
+    from govkit.arch import index as I
+    from govkit.arch import summaries
+    from govkit.arch.context import resolve_target
+    t = resolve_target(ruta)
+    if t["mode"] != "corp":
+        raise ValueError("arch_summary es para rutas corporativas (global-…/ruta); para tu repo usa arch_context")
+    idx = I.load(t["source"].id)
+    if not idx:
+        raise ValueError(f"NO DETERMINADO: {t['source'].repo} no está ingerido (arch_sync o govkit arch ingest --snapshot)")
+    s = summaries.summarize(idx, summaries.unit_for(idx, t["rel"]))
+    return {"markdown": summaries.render(s), "data": s}
+
+
+def t_arch_search(texto: str, k: int = 8, fuente: Optional[str] = None):
+    from govkit.arch import registry, search
+    return {"hits": search.search(texto, k=int(k), source=registry.get(fuente).id if fuente else ""),
+            "note": "Cada hit trae traza repo@commit:ruta §sección, estado normativo y etiqueta (DOC/COD)."}
+
+
+def t_arch_sync(fuente: Optional[str] = None, fetch: bool = False, umbral: str = "MEDIUM"):
+    from govkit.arch import changes
+    reps = changes.sync([fuente] if fuente else None, fetch=bool(fetch), min_impact=umbral)
+    return {"reports": [_slim_report(r) for r in reps],
+            "markdown": "\n".join(changes.render_alert(a) for r in reps for a in r.get("alerts") or []),
+            "note": "Solo lectura: fetch de refs remotas (si fetch=true) y lectura de origin/<rama>; nunca pull."}
+
+
+def t_arch_changes(n: Optional[int] = None):
+    from govkit.arch import changes
+    logs = changes.list_changelogs(30)
+    if n is None:
+        return {"changelogs": [p.name for p in logs]}
+    p = logs[int(n) - 1]
+    return {"file": p.name, "markdown": p.read_text(encoding="utf-8")}
+
+
+def t_arch_conflicts(id: Optional[str] = None):
+    from govkit.arch import facts as F
+    st = F.conflict_states()
+    return [c for c in st if not id or c["id"].upper() == str(id).upper()]
+
+
+def t_arch_facts():
+    from govkit.arch import facts as F
+    return F.evaluate_all()
+
+
+def t_arch_adrs(repo: Optional[str] = None, potential_only: bool = False):
+    from pathlib import Path as _P
+
+    from govkit.arch import adr as A
+    inv = A.inventory(repo=_P(repo).resolve() if repo else None)
+    pots = A.potentials(adrs=[x for x in inv if x["source"] != "govkit"])
+    return {"potential_adrs": pots} if potential_only else {"adrs": inv, "potential_adrs": pots}
+
+
+def t_arch_dp(repo: Optional[str] = None, nombre: Optional[str] = None):
+    from pathlib import Path as _P
+
+    from govkit.arch import archimate
+    from govkit.arch import index as I
+    am = I.load("archimate")
+    if not am:
+        raise ValueError("NO DETERMINADO: el modelo ArchiMate no está ingerido")
+    if not repo:
+        return {"data_products": archimate.dp_inventory(am)}
+    return archimate.compare(am, _P(repo).resolve(), nombre)
+
+
+def t_arch_relations(rotas: bool = False, fuente: Optional[str] = None):
+    from govkit.arch import graph, registry
+    from govkit.arch.summaries import context_map
+    edges = graph.current()
+    if fuente:
+        sid = registry.get(fuente).id
+        edges = [e for e in edges if e["src"]["source"] == sid or e["dst"].get("source") == sid]
+    if rotas:
+        edges = [e for e in edges if e["type"] == "reference_broken"]
+    else:
+        edges = [e for e in edges if e["src"]["source"] != (e["dst"].get("source") or "") or
+                 e["type"] in ("duplicate_divergent", "mirror")]
+    return {"curated": context_map().get("relations") or [], "edges": edges[:300]}
+
+
 def _states() -> List[str]:
     from govkit.paths import registry
 
@@ -411,7 +532,68 @@ NOTE_TOOLS = [
 ]
 
 
+_ro = {"readOnlyHint": True, "idempotentHint": True, "openWorldHint": False}
+ARCH_TOOLS = [
+    {"name": "arch_status", "title": "Memoria arquitectónica: estado",
+     "description": "Fuentes corporativas (governance, platform-core, ArchiMate, metadata-catalog): clon local, commit "
+                    "analizado, pendientes, working tree y SECRET DETECTED.",
+     "inputSchema": {"type": "object", "properties": {}}, "annotations": _ro},
+    {"name": "arch_context", "title": "Qué debo mirar si analizo esta ruta",
+     "description": "Architecture Context Map de una ruta (corporativa `global-…/ruta` o de un repo de Data Product): "
+                    "mini-resumen, rutas relacionadas con el porqué y su estado normativo, reglas y KB que aplican, "
+                    "hechos verificados, contradicciones abiertas, ADR y Potential ADR, diseño ArchiMate.",
+     "inputSchema": {"type": "object", "required": ["ruta"], "properties": {"ruta": {"type": "string"}}},
+     "annotations": _ro},
+    {"name": "arch_summary", "title": "Mini-resumen arquitectónico",
+     "description": "Mini-resumen (§6) de una unidad de un repo corporativo: propósito, tipo, tecnologías, dependencias, "
+                    "patrones, lineamientos, ADR, riesgos, qué revisar si cambia, evidencia y confianza.",
+     "inputSchema": {"type": "object", "required": ["ruta"], "properties": {"ruta": {"type": "string"}}},
+     "annotations": _ro},
+    {"name": "arch_search", "title": "Buscar en las fuentes corporativas",
+     "description": "Búsqueda determinista (BM25) por secciones con traza repo@commit:ruta §sección y estado normativo.",
+     "inputSchema": {"type": "object", "required": ["texto"], "properties": {
+         "texto": {"type": "string"}, "k": {"type": "integer", "default": 8}, "fuente": {"type": "string"}}},
+     "annotations": _ro},
+    {"name": "arch_sync", "title": "Actualizar la memoria arquitectónica desde Git",
+     "description": "Compara el último commit analizado vs origin/<rama> de cada clon local (fetch=true descarga refs "
+                    "remotas; NUNCA pull ni cambios al working tree) y devuelve ARCHITECTURAL CHANGE DETECTED, hechos "
+                    "que cambiaron, análisis posiblemente obsoletos y señales de ramas propuesta.",
+     "inputSchema": {"type": "object", "properties": {"fuente": {"type": "string"}, "fetch": {"type": "boolean", "default": False},
+                                                      "umbral": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]}}},
+     "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True}},
+    {"name": "arch_changes", "title": "Changelogs arquitectónicos",
+     "description": "Lista los ARCHITECTURAL KNOWLEDGE UPDATE guardados o devuelve el N-ésimo (1 = más reciente).",
+     "inputSchema": {"type": "object", "properties": {"n": {"type": "integer"}}}, "annotations": _ro},
+    {"name": "arch_conflicts", "title": "Contradicciones (CONFLICT DETECTED)",
+     "description": "Contradicciones registradas entre fuentes (y con govkit) con su estado VIGENTE/REVISAR según hechos "
+                    "re-verificados, qué confirmar y reglas afectadas.",
+     "inputSchema": {"type": "object", "properties": {"id": {"type": "string"}}}, "annotations": _ro},
+    {"name": "arch_facts", "title": "Hechos verificables",
+     "description": "Hechos (enums, rutas prohibidas, versiones, patrones) re-evaluados contra el índice, con traza.",
+     "inputSchema": {"type": "object", "properties": {}}, "annotations": _ro},
+    {"name": "arch_adrs", "title": "ADR y Potential ADR",
+     "description": "Inventario de ADR (fuentes corporativas, govkit y opcionalmente el repo) y decisiones de facto sin "
+                    "ADR (Potential ADR, nunca se crean automáticamente).",
+     "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "potential_only": {"type": "boolean"}}},
+     "annotations": _ro},
+    {"name": "arch_dp", "title": "Diseño ArchiMate aprobado vs implementación",
+     "description": "Sin repo: Data Products modelados. Con repo: capas modeladas (APPROVED) vs implementadas "
+                    "(IMPLEMENTED) en el repo local; nunca concluye desviación sin evidencia de ambos lados.",
+     "inputSchema": {"type": "object", "properties": {"repo": {"type": "string"}, "nombre": {"type": "string"}}},
+     "annotations": _ro},
+    {"name": "arch_relations", "title": "Relaciones entre repositorios",
+     "description": "Matriz curada (R1..R16) + relaciones derivadas del contenido (referencias, espejos, duplicados "
+                    "divergentes, modelos de DP); rotas=true lista referencias rotas.",
+     "inputSchema": {"type": "object", "properties": {"rotas": {"type": "boolean"}, "fuente": {"type": "string"}}},
+     "annotations": _ro},
+]
+
+
 TOOLS: Dict[str, Callable[..., Any]] = {
+    "arch_status": t_arch_status, "arch_context": t_arch_context, "arch_summary": t_arch_summary,
+    "arch_search": t_arch_search, "arch_sync": t_arch_sync, "arch_changes": t_arch_changes,
+    "arch_conflicts": t_arch_conflicts, "arch_facts": t_arch_facts, "arch_adrs": t_arch_adrs, "arch_dp": t_arch_dp,
+    "arch_relations": t_arch_relations,
     "sources": t_sources, "criteria_search": t_criteria_search, "notes_list": t_notes_list, "notes_get": t_notes_get, "notes_save": t_notes_save,
     "notes_append": t_notes_append,
     "lint": t_lint, "gate": t_gate, "score": t_score, "fix": t_fix, "explain_rule": t_explain_rule,
@@ -545,7 +727,7 @@ def dispatch(method: str, params: Dict[str, Any], state: Dict[str, Any]) -> Any:
     if method in ("ping", "logging/setLevel"):
         return {}
     if method == "tools/list":
-        return {"tools": tool_specs() + NOTE_TOOLS}
+        return {"tools": tool_specs() + NOTE_TOOLS + ARCH_TOOLS}
     if method == "tools/call":
         name, args = params.get("name"), params.get("arguments") or {}
         fn = TOOLS.get(name)

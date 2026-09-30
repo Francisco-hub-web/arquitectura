@@ -1,5 +1,72 @@
 # Changelog — govkit
 
+## 2.0.0 — 2026-09-30
+### Agregado — memoria arquitectónica (`govkit arch`, ADR-008)
+- **Fuentes**: los repos corporativos global-data-governance, global-data-platform-core, global-data-archimate-models
+  y global-metadata-catalog se indexan por `repo@commit`, con hash, tipo, autoridad, secciones, referencias, estado
+  normativo (REQUIRED/APPROVED/RECOMMENDED/IMPLEMENTED/DEPRECATED/UNKNOWN) y etiqueta epistemológica (DOC/COD/…).
+  - Rutas registradas en `rules/registry/arch_sources.yaml`; clones esperados en `~/global-*`.
+  - El índice vive solo en `~/.govkit/arch`.
+- **Git en solo lectura**:
+  - `arch sync` hace `fetch` solo de refs remotas y lee `origin/<rama>` con `ls-tree`/`cat-file`;
+  - nunca hace pull, checkout, reset ni stash (hay lista blanca de subcomandos), con hooks desactivados y sin ejecutar código del repo;
+  - si hay cambios locales, informa y explica cómo proceder sin restaurar archivos (p.ej. `.github/setup.js`).
+- **Snapshots `.txt`**: `arch ingest --snapshot` reproduce byte a byte cada archivo (valida sha256) y hace la misma detección incremental sin git.
+- **Detección de cambios**:
+  - diff semántico (secciones Markdown, claves y enums de YAML/JSON, elementos, vistas y relaciones ArchiMate);
+  - clasificación NEW/UPDATED/DEPRECATED/CONFLICTING/UNKNOWN e impacto NONE…CRITICAL con el porqué;
+  - alertas ARCHITECTURAL CHANGE DETECTED agrupadas por unidad arquitectónica;
+  - changelog ARCHITECTURAL KNOWLEDGE UPDATE en `~/.govkit/arch/changes/`;
+  - reglas, KB y notas posiblemente obsoletas;
+  - señales de ramas `proposal/`, `dp/`, `update/`…
+- **Contexto por ruta**: `arch contexto <ruta>`, corporativa o de tu Data Product, responde "qué debo mirar si analizo esta ruta", con el porqué, el estado normativo, las reglas y la KB que aplican, los hechos verificados, las contradicciones abiertas, los ADR y el diseño ArchiMate.
+- **Mini-resúmenes**: `arch resumen` sigue los campos del §6 del SUPER PROMPT, con evidencia y nivel de confianza.
+- **Relaciones**: `arch relaciones` da la matriz curada R1..R16 más las relaciones derivadas del contenido:
+  - referencias válidas y rotas;
+  - espejos y duplicados divergentes;
+  - Data Products modelados.
+- **Hechos y contradicciones**:
+  - 34 hechos verificables (`arch hechos`);
+  - 15 contradicciones (`arch conflictos`, C-01..C-15 ↔ H-18..H-32) que pasan a REVISAR cuando su evidencia cambia.
+- **ADR**: `arch adr` inventaría los ADR corporativos, los de govkit y los del repo, más los Potential ADR (curados y detectados). Nunca crea un ADR.
+- **ArchiMate**: `arch dp [repo]` lista los Data Products modelados y compara el diseño aprobado con lo implementado, sin concluir desviaciones sin evidencia.
+- **Utilidades**:
+  - `arch buscar` (BM25 por sección con traza);
+  - `arch trazabilidad` (cada fuente citada por reglas y KB existe);
+  - `arch secretos` (SECRET DETECTED, solo archivo, ruta y tipo).
+- **MCP**: `arch_status`, `arch_context`, `arch_summary`, `arch_search`, `arch_sync`, `arch_changes`, `arch_conflicts`, `arch_facts`, `arch_adrs`, `arch_dp`, `arch_relations`.
+- **Asistente** (`govkit "…"` / `-p`):
+  - usa esta capa;
+  - responde con Contexto/Evidencia/Esperada/Observada/Diferencias/Impacto/Confianza;
+  - etiqueta cada afirmación y dice "NO DETERMINADO" cuando no hay evidencia.
+- `govkit doctor` muestra el estado de cada fuente.
+
+### Agregado — estándar platform-core (ADR-009, ruleset 2026.10.0)
+- **Estándar por repo** (`auto`, `platform-core` o `lineamientos`), con detección por marcadores, `--estandar` en lint/gate/init, `standard:` en la config o `GOVKIT_STANDARD`.
+- **26 reglas GOV-PCX-*** que leen el estándar de global-data-platform-core como dato. Cubren:
+  - ficha `metadata/data_product.yaml`;
+  - carpetas medallion (sin `contracts/input`);
+  - forma ODCS v3.1.0 y extensión xCencosud;
+  - linaje por capa y bidireccional;
+  - `processing` deprecado;
+  - physical/catalog e ingestion_origin;
+  - copia del estándar, CI y catalog-export;
+  - equivalentes ODCS de GOV 06/08/15 (descripciones, compatibilidad, breaking changes, calidad);
+  - nombre de repo.
+- `--cenco-dc` (opt-in) ejecuta además el validador oficial desde el clon local.
+- `govkit init --estandar platform-core` crea el baseline con la ficha. `govkit fix` crea la ficha y las carpetas del baseline.
+
+### Cambiado
+- 22 reglas del lineamiento "Estructura de Repositorio" (contratos input/output, ficha `spec.*`, DoR/DoD, `fact_`,
+  workflows y carpetas propias, `quality/expectations`) declaran `standards: [lineamientos]`: no aplican a repos
+  platform-core. En repos sin marcadores platform-core el comportamiento no cambia.
+- Reportes (consola y JSON) muestran el estándar aplicado.
+- `govkit init --type` acepta `mdh`, `sm` y `none` (tipos observados en el diseño ArchiMate aprobado).
+
+### Corregido
+- 13 reglas (GOV-AIM-*, GOV-DOC-005) y KB_15/KB_16 citaban `12-ai-ml-data-framework.md`, que no existe; el archivo
+  real es `12-ai-ml-dataframework.md`. Detectado por `govkit arch trazabilidad`.
+
 ## 1.4.0 — 2026-09-29
 ### Agregado
 - `govkit verificar "lo que escuché"` (alias `existe`): ¿ese criterio existe en el framework? Recuperación
